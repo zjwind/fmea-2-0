@@ -1,6 +1,6 @@
 # FMEA 2.0 概要设计文档
 
-> **版本**: V1.0  
+> **版本**: V1.1  
 > **日期**: 2026-05-28  
 > **关联文档**: FMEA2.0-需求分析文档 V2.0  
 
@@ -14,11 +14,12 @@
 4. [模块划分与包结构](#4-模块划分与包结构)
 5. [多数据源设计](#5-多数据源设计)
 6. [数据库设计](#6-数据库设计)
-7. [外部系统集成设计](#7-外部系统集成设计)
-8. [AI模型集成设计](#8-ai模型集成设计)
-9. [核心业务模块设计](#9-核心业务模块设计)
-10. [安全设计](#10-安全设计)
-11. [部署架构](#11-部署架构)
+7. [前端设计](#7-前端设计)
+8. [外部系统集成设计](#8-外部系统集成设计)
+9. [AI模型集成设计](#9-ai模型集成设计)
+10. [核心业务模块设计](#10-核心业务模块设计)
+11. [安全设计](#11-安全设计)
+12. [部署架构](#12-部署架构)
 
 ---
 
@@ -42,7 +43,10 @@
 | 约束项 | 约束值 |
 |--------|--------|
 | 技术框架 | Spring Boot + MyBatis Plus |
+| 数据库 | SQL Server |
 | 数据源策略 | 多数据源（FMEA主库 + PMS直查库） |
+| 前端框架 | EasyUI + FreeMarker(FTL)模板 |
+| 飞书画板 | iframe嵌入 |
 | 外部集成 | 飞书API通过服务类封装；PMS通过数据源直查 |
 | 终端 | 仅PC端 |
 | 并发规模 | 约100人 |
@@ -67,6 +71,10 @@
 ┌──────────────────────────────▼──────────────────────────────────────┐
 │                    FMEA 2.0 Application                              │
 │                  (Spring Boot 单体应用)                               │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                  View Layer (FTL + EasyUI)                   │    │
+│  │  FreeMarker模板渲染 + EasyUI组件(jQuery DataGrid/Dialog等)   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │                    Controller Layer                          │    │
 │  │  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌────────┐  │    │
@@ -96,8 +104,8 @@
 └─────────────────────────────────────────────────────────────────────┘
           │                              │
 ┌─────────▼──────────┐       ┌──────────▼──────────┐
-│   FMEA Database    │       │    PMS Database      │
-│   (MySQL 主库)      │       │   (MySQL 只读)       │
+│  FMEA SQL Server   │       │   PMS SQL Server     │
+│    (读写)           │       │    (只读)             │
 └────────────────────┘       └─────────────────────┘
 ```
 
@@ -108,15 +116,16 @@
 1. **并发规模小**：约100人并发，单体应用足以支撑
 2. **业务内聚性高**：DRBFM全流程紧密关联，不适合微服务拆分
 3. **运维简单**：单体部署、监控、排障成本最低
-4. **多数据源**：通过 Spring 的 AbstractRoutingDataSource 实现FMEA主库与PMS只读库的切换
+4. **多数据源**：通过 dynamic-datasource 实现FMEA主库与PMS只读库的切换
 
-架构分为四层：
+架构分为五层：
 
 | 层次 | 职责 | 关键技术 |
 |------|------|----------|
+| View Layer | 页面渲染、UI组件 | FreeMarker(FTL) + EasyUI(jQuery) |
 | Controller Layer | 接收请求、参数校验、响应封装 | Spring MVC, Validation |
 | Service Layer | 业务逻辑、流程编排、事务管理 | Spring Transaction, 状态机 |
-| Integration Layer | 外部系统对接封装 | RestTemplate/WebClient, JavaMail |
+| Integration Layer | 外部系统对接封装 | RestTemplate, JavaMail |
 | Persistence Layer | 数据持久化、多数据源路由 | MyBatis Plus, Dynamic Datasource |
 
 ---
@@ -130,29 +139,39 @@
 | 基础框架 | Spring Boot | 2.7.x | 主框架 |
 | ORM | MyBatis Plus | 3.5.x | 持久层框架，单表CRUD简化 |
 | 多数据源 | dynamic-datasource-spring-boot-starter | 3.6.x | MyBatis Plus官方多数据源组件 |
-| 数据库 | MySQL | 8.0 | FMEA主库 + PMS只读库 |
+| 数据库 | SQL Server | 2019+ | FMEA主库 + PMS只读库 |
+| 数据库驱动 | mssql-jdbc | 11.x | SQL Server JDBC驱动 |
 | 连接池 | HikariCP | — | Spring Boot默认 |
 | 缓存 | Redis | 7.x | 会话缓存、配置缓存、分布式锁 |
+| 模板引擎 | FreeMarker | 2.3.x | FTL模板渲染页面 |
+| 前端UI | EasyUI | 1.10.x | jQuery UI组件库(DataGrid/Dialog/Tabs等) |
+| 前端基础 | jQuery | 3.x | EasyUI依赖 |
 | 认证 | Spring Security + CAS | — | SSO单点登录 |
 | 任务调度 | Spring Task / Quartz | — | 评审通知定时任务、统计推送 |
 | 文件处理 | Apache POI | 5.x | Excel导入导出 |
 | 文档处理 | Apache Tika | 2.x | Word/PDF文档内容提取 |
 | HTTP客户端 | RestTemplate | — | 飞书API、AI API调用 |
 | 邮件 | Spring Boot Mail | — | SMTP邮件发送 |
-| 接口文档 | Knife4j (Swagger) | 3.x | API文档自动生成 |
 | 日志 | Logback + SLF4J | — | 审计日志、业务日志 |
 | 工具库 | Hutool | 5.x | 通用工具 |
 | 对象映射 | MapStruct | 1.5.x | DTO/Entity转换 |
 
-### 3.2 前端技术栈（参考）
+### 3.2 前端技术栈
 
 | 类别 | 技术 | 说明 |
 |------|------|------|
-| 框架 | Vue 3 | SPA前端 |
-| UI组件 | Element Plus | 企业级组件库 |
-| 图表 | ECharts | 看板统计图表 |
-| 画板 | 飞书画板嵌入 | 结构框图通过飞书SDK嵌入 |
-| 状态管理 | Pinia | — |
+| 模板引擎 | FreeMarker (FTL) | 服务端渲染页面，Controller返回FTL视图 |
+| UI框架 | EasyUI | jQuery企业级组件库 |
+| 数据表格 | datagrid | 列表展示、分页、排序 |
+| 表单 | form / validatebox | 表单提交与校验 |
+| 弹窗 | dialog / messager | 弹窗交互 |
+| 标签页 | tabs | 多步骤页面切换 |
+| 下拉框 | combobox / combotree | 下拉选择/树形选择 |
+| 日期 | datebox | 日期选择 |
+| 文件上传 | filebox | 文件上传 |
+| 图表 | ECharts (独立引入) | 看板统计图表 |
+| 画板嵌入 | iframe | 飞书画板通过iframe嵌入 |
+| AJAX交互 | jQuery.ajax | 前后端数据交互(JSON) |
 
 ---
 
@@ -185,8 +204,28 @@ fmea-server/
 │   └── fmea-integration-email/   # 邮件服务
 │
 └── fmea-app/                     # 启动模块
-    └── src/main/java/
-        └── com.fmea.FmeaApplication.java
+    └── src/main/
+        ├── java/
+        │   └── com.fmea.FmeaApplication.java
+        └── resources/
+            ├── templates/            # FTL模板根目录
+            │   ├── layout.ftl        # 布局模板
+            │   ├── evaluation/       # 评估模块页面
+            │   ├── analysis/         # 分析模块页面
+            │   ├── baseline/         # 基线模块页面
+            │   ├── review/           # 评审模块页面
+            │   ├── inbound/          # 入库模块页面
+            │   ├── library/          # 基线库页面
+            │   ├── dashboard/        # 看板页面
+            │   └── config/           # 配置页面
+            ├── static/               # 静态资源
+            │   ├── easyui/           # EasyUI库
+            │   ├── js/               # 业务JS
+            │   ├── css/              # 业务样式
+            │   └── images/           # 图片
+            └── mapper/               # MyBatis XML
+                ├── fmea/             # FMEA数据源Mapper
+                └── pms/              # PMS数据源Mapper
 ```
 
 ### 4.2 包结构规范
@@ -195,7 +234,7 @@ fmea-server/
 
 ```
 com.fmea.{module}/
-├── controller/           # REST接口
+├── controller/           # Spring MVC控制器(返回FTL视图名或JSON)
 ├── service/              # 业务逻辑
 │   └── impl/
 ├── mapper/               # MyBatis Mapper接口
@@ -208,7 +247,45 @@ com.fmea.{module}/
 └── config/               # 模块配置
 ```
 
-### 4.3 模块依赖关系
+### 4.3 FTL模板目录规范
+
+```
+templates/
+├── layout.ftl                    # 公共布局(头部/侧边栏/底部)
+├── common/
+│   ├── header.ftl                # 头部导航
+│   ├── sidebar.ftl               # 侧边菜单
+│   └── pagination.ftl            # 分页组件
+├── evaluation/
+│   ├── list.ftl                  # 评估任务列表
+│   ├── form.ftl                  # 变更点清单编辑
+│   ├── dimension.ftl             # 五维评估表
+│   └── history-issue.ftl         # 历史问题导入
+├── analysis/
+│   ├── structure.ftl             # 结构框图(含iframe嵌入飞书画板)
+│   ├── function-matrix.ftl       # 功能矩阵
+│   ├── failure.ftl               # 失效分析(合并页面)
+│   └── sod-rating.ftl            # SOD评分
+├── baseline/
+│   ├── output.ftl                # 基线输出
+│   └── landing.ftl               # 落地跟踪
+├── review/
+│   ├── detail.ftl                # 评审详情
+│   └── opinion.ftl               # 意见闭环
+├── inbound/
+│   └── approval.ftl              # 入库审批
+├── library/
+│   ├── baseline-list.ftl         # 基线库列表
+│   ├── failure-list.ftl          # 失效库列表
+│   └── measure-list.ftl          # 措施库列表
+├── dashboard/
+│   └── index.ftl                 # 看板首页
+└── config/
+    ├── role.ftl                  # 角色配置
+    └── sod-standard.ftl          # SOD标准配置
+```
+
+### 4.4 模块依赖关系
 
 ```
 fmea-app
@@ -241,8 +318,8 @@ fmea-app
 
 | 数据源名称 | 用途 | 权限 | 连接池 |
 |------------|------|------|--------|
-| fmea | FMEA业务主库 | 读写 | HikariCP (max=20) |
-| pms | PMS系统数据库 | **只读** | HikariCP (max=5) |
+| fmea | FMEA业务主库(SQL Server) | 读写 | HikariCP (max=20) |
+| pms | PMS系统数据库(SQL Server) | **只读** | HikariCP (max=5) |
 
 ### 5.2 数据源配置
 
@@ -254,15 +331,15 @@ spring:
       strict: true
       datasource:
         fmea:
-          url: jdbc:mysql://fmea-db:3306/fmea?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+          url: jdbc:sqlserver://fmea-db:1433;databaseName=fmea;encrypt=false;trustServerCertificate=true
           username: ${FMEA_DB_USER}
           password: ${FMEA_DB_PASS}
-          driver-class-name: com.mysql.cj.jdbc.Driver
+          driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
         pms:
-          url: jdbc:mysql://pms-db:3306/pms?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+          url: jdbc:sqlserver://pms-db:1433;databaseName=pms;encrypt=false;trustServerCertificate=true
           username: ${PMS_DB_USER}
           password: ${PMS_DB_PASS}
-          driver-class-name: com.mysql.cj.jdbc.Driver
+          driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 ```
 
 ### 5.3 数据源切换方式
@@ -298,7 +375,7 @@ public class PmsQueryServiceImpl implements PmsQueryService {
 |--------|------|
 | 只读限制 | PMS数据源所有操作仅限SELECT，禁止INSERT/UPDATE/DELETE |
 | 查询封装 | PMS查询统一封装在 `fmea-integration-pms` 模块，业务模块不直接操作PMS数据源 |
-| SQL管理 | PMS查询SQL写在独立Mapper XML中，与FMEA业务Mapper隔离 |
+| SQL管理 | PMS查询SQL写在独立Mapper XML中，与FMEA业务Mapper隔离；注意SQL Server语法差异 |
 | 缓存策略 | PMS查询结果按需缓存至Redis（如项目信息缓存30分钟），减少跨库查询 |
 | 事务边界 | PMS查询不参与FMEA业务事务，禁止在 `@Transactional` 中混用两个数据源 |
 
@@ -316,693 +393,669 @@ public class PmsQueryServiceImpl implements PmsQueryService {
 
 ## 6. 数据库设计
 
-### 6.1 FMEA主库表设计
+### 6.1 SQL Server 适配要点
 
-#### 6.1.1 项目管理域
+| 适配项 | MySQL | SQL Server |
+|--------|-------|------------|
+| 主键自增 | AUTO_INCREMENT | IDENTITY(1,1) |
+| 字符串类型 | VARCHAR | NVARCHAR(支持中文) |
+| 大文本 | TEXT / LONGTEXT | NVARCHAR(MAX) |
+| 布尔类型 | TINYINT(1) | BIT |
+| 时间类型 | DATETIME | DATETIME2 |
+| 默认时间 | DEFAULT CURRENT_TIMESTAMP | DEFAULT GETDATE() |
+| 更新时间 | ON UPDATE CURRENT_TIMESTAMP | 需通过触发器或应用层实现 |
+| 注释 | COMMENT 'xxx' | 需通过EXEC sp_addextendedproperty添加 |
+| JSON | JSON类型 | NVARCHAR(MAX) + ISJSON约束(SQL Server 2016+) |
+| 索引 | INDEX idx_name (col) | CREATE NONCLUSTERED INDEX |
+
+### 6.2 FMEA主库表设计
+
+#### 6.2.1 项目管理域
 
 ```sql
--- 项目表
 CREATE TABLE fmea_project (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name            VARCHAR(200) NOT NULL,
-    bg              VARCHAR(50) NOT NULL COMMENT 'BG标识',
-    pdtl            VARCHAR(100) COMMENT 'PDTL负责人',
-    tr_stage        VARCHAR(20) COMMENT '当前TR阶段',
-    is_level1       TINYINT(1) DEFAULT 0 COMMENT '是否1级项目(从PMS同步)',
-    pms_project_id  VARCHAR(100) COMMENT 'PMS系统项目ID',
-    created_by      VARCHAR(64),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_by      VARCHAR(64),
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_deleted      TINYINT(1) DEFAULT 0,
-    INDEX idx_pms_project_id (pms_project_id),
-    INDEX idx_bg (bg)
-) COMMENT '项目表';
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    name            NVARCHAR(200) NOT NULL,
+    bg              NVARCHAR(50) NOT NULL,
+    pdtl            NVARCHAR(100),
+    tr_stage        NVARCHAR(20),
+    is_level1       BIT DEFAULT 0,
+    pms_project_id  NVARCHAR(100),
+    created_by      NVARCHAR(64),
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_by      NVARCHAR(64),
+    updated_time    DATETIME2 DEFAULT GETDATE(),
+    is_deleted      BIT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_project_pms_id ON fmea_project(pms_project_id);
+CREATE NONCLUSTERED INDEX idx_fmea_project_bg ON fmea_project(bg);
 
--- FMEA分析领域配置表
 CREATE TABLE fmea_domain (
-    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
-    domain_name         VARCHAR(100) NOT NULL,
-    domain_desc         VARCHAR(500),
-    role                VARCHAR(100),
-    role_representative VARCHAR(100),
-    created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_deleted          TINYINT(1) DEFAULT 0
-) COMMENT 'FMEA分析领域配置';
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
+    domain_name         NVARCHAR(100) NOT NULL,
+    domain_desc         NVARCHAR(500),
+    role                NVARCHAR(100),
+    role_representative NVARCHAR(100),
+    created_time        DATETIME2 DEFAULT GETDATE(),
+    is_deleted          BIT DEFAULT 0
+);
 
--- 项目权限表
 CREATE TABLE fmea_permission (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id         VARCHAR(64) NOT NULL,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    user_id         NVARCHAR(64) NOT NULL,
     project_id      BIGINT NOT NULL,
-    resource_type   VARCHAR(50) NOT NULL COMMENT '资源类型',
-    permission_type VARCHAR(30) NOT NULL COMMENT '权限类型: manage/edit/read/review/approve',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE INDEX idx_user_project (user_id, project_id, resource_type, permission_type),
-    INDEX idx_project_id (project_id)
-) COMMENT '项目权限表(由PMS同步)';
+    resource_type   NVARCHAR(50) NOT NULL,
+    permission_type NVARCHAR(30) NOT NULL,
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE UNIQUE NONCLUSTERED INDEX idx_fmea_perm_unique ON fmea_permission(user_id, project_id, resource_type, permission_type);
+CREATE NONCLUSTERED INDEX idx_fmea_perm_project ON fmea_permission(project_id);
 ```
 
-#### 6.1.2 DRBFM触发评估域
+#### 6.2.2 DRBFM触发评估域
 
 ```sql
--- 变更点清单表
 CREATE TABLE fmea_change_list (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     project_id      BIGINT NOT NULL,
-    level           VARCHAR(20) NOT NULL COMMENT 'system/part',
-    created_by      VARCHAR(64),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_deleted      TINYINT(1) DEFAULT 0,
-    INDEX idx_project_id (project_id)
-) COMMENT '变更点清单';
+    level           NVARCHAR(20) NOT NULL,
+    created_by      NVARCHAR(64),
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE(),
+    is_deleted      BIT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_cl_project ON fmea_change_list(project_id);
 
--- 变更点清单项(支持无限层级树结构)
 CREATE TABLE fmea_change_list_item (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     change_list_id  BIGINT NOT NULL,
-    parent_id       BIGINT DEFAULT 0 COMMENT '父节点ID, 0表示顶级',
-    level_num       INT NOT NULL DEFAULT 0 COMMENT '层级深度',
-    item_id         VARCHAR(50) NOT NULL COMMENT '业务ID(合并依据)',
-    structure_name  VARCHAR(200) NOT NULL,
-    dev_type        VARCHAR(50) COMMENT '开发类型(手动输入)',
-    imn_option      VARCHAR(10) COMMENT 'I/M/N选项',
-    change_point    TEXT COMMENT '变更点描述',
-    quality_match   TEXT COMMENT '质量策划匹配内容',
+    parent_id       BIGINT DEFAULT 0,
+    level_num       INT NOT NULL DEFAULT 0,
+    item_id         NVARCHAR(50) NOT NULL,
+    structure_name  NVARCHAR(200) NOT NULL,
+    dev_type        NVARCHAR(50),
+    imn_option      NVARCHAR(10),
+    change_point    NVARCHAR(MAX),
+    quality_match   NVARCHAR(MAX),
     sort_order      INT DEFAULT 0,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_deleted      TINYINT(1) DEFAULT 0,
-    INDEX idx_change_list_id (change_list_id),
-    INDEX idx_parent_id (parent_id),
-    INDEX idx_item_id (item_id)
-) COMMENT '变更点清单项';
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE(),
+    is_deleted      BIT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_cli_list ON fmea_change_list_item(change_list_id);
+CREATE NONCLUSTERED INDEX idx_fmea_cli_parent ON fmea_change_list_item(parent_id);
+CREATE NONCLUSTERED INDEX idx_fmea_cli_item ON fmea_change_list_item(item_id);
 
--- 质量策划表
 CREATE TABLE fmea_quality_plan (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     project_id      BIGINT NOT NULL,
-    raw_content     LONGTEXT COMMENT '原始导入内容(markdown)',
-    file_name       VARCHAR(200),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_deleted      TINYINT(1) DEFAULT 0,
-    INDEX idx_project_id (project_id)
-) COMMENT '质量策划';
+    raw_content     NVARCHAR(MAX),
+    file_name       NVARCHAR(200),
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    is_deleted      BIT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_qp_project ON fmea_quality_plan(project_id);
 
--- 评估任务表
 CREATE TABLE fmea_evaluation_task (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     project_id      BIGINT NOT NULL,
-    level           VARCHAR(20) NOT NULL COMMENT 'system/part',
-    status          VARCHAR(30) NOT NULL COMMENT 'draft/submitted/approved/rejected',
+    level           NVARCHAR(20) NOT NULL,
+    status          NVARCHAR(30) NOT NULL,
     submit_count    INT DEFAULT 0,
-    is_withdrawn    TINYINT(1) DEFAULT 0,
-    creator         VARCHAR(64),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_deleted      TINYINT(1) DEFAULT 0,
-    INDEX idx_project_level (project_id, level)
-) COMMENT '评估任务';
+    is_withdrawn    BIT DEFAULT 0,
+    creator         NVARCHAR(64),
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE(),
+    is_deleted      BIT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_et_project_level ON fmea_evaluation_task(project_id, level);
 
--- 评估项(五维评估)
 CREATE TABLE fmea_evaluation_item (
-    id                      BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id                      BIGINT IDENTITY(1,1) PRIMARY KEY,
     task_id                 BIGINT NOT NULL,
     change_list_item_id     BIGINT NOT NULL,
-    tech_novelty            DECIMAL(5,2) COMMENT '技术新颖性分数',
-    impact_scope            DECIMAL(5,2) COMMENT '影响范围分数',
-    severity                DECIMAL(5,2) COMMENT '失效严重度分数',
-    change_complexity       DECIMAL(5,2) COMMENT '变更复杂度分数',
-    history_issue           DECIMAL(5,2) COMMENT '历史问题分数',
-    risk_score              DECIMAL(5,2) COMMENT '风险综合评分',
-    risk_level              VARCHAR(10) COMMENT 'H/M/L',
-    drbfm_suggestion        VARCHAR(50) COMMENT 'DRBFM触发建议',
-    drbfm_suggestion_reason TEXT COMMENT '建议理由',
-    drbfm_conclusion        VARCHAR(50) COMMENT '最终DRBFM触发结论',
-    created_time            DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time            DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_task_id (task_id)
-) COMMENT '评估项(五维评估)';
+    tech_novelty            DECIMAL(5,2),
+    impact_scope            DECIMAL(5,2),
+    severity                DECIMAL(5,2),
+    change_complexity       DECIMAL(5,2),
+    history_issue           DECIMAL(5,2),
+    risk_score              DECIMAL(5,2),
+    risk_level              NVARCHAR(10),
+    drbfm_suggestion        NVARCHAR(50),
+    drbfm_suggestion_reason NVARCHAR(MAX),
+    drbfm_conclusion        NVARCHAR(50),
+    created_time            DATETIME2 DEFAULT GETDATE(),
+    updated_time            DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_ei_task ON fmea_evaluation_item(task_id);
 
--- 五维评估选项表
 CREATE TABLE fmea_evaluation_dimension_option (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    evaluation_item_id BIGINT NOT NULL,
-    dimension       VARCHAR(30) NOT NULL COMMENT '维度: tech_novelty/impact_scope/severity/change_complexity/history_issue',
-    risk_level      VARCHAR(10) NOT NULL COMMENT 'high/mid/low',
-    option_text     VARCHAR(200) NOT NULL COMMENT '选项描述',
-    is_selected     TINYINT(1) DEFAULT NULL COMMENT '是否选中: 1是/0否/null未选',
-    sort_order      INT DEFAULT 0,
-    INDEX idx_evaluation_item_id (evaluation_item_id)
-) COMMENT '五维评估选项';
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
+    evaluation_item_id  BIGINT NOT NULL,
+    dimension           NVARCHAR(30) NOT NULL,
+    risk_level          NVARCHAR(10) NOT NULL,
+    option_text         NVARCHAR(200) NOT NULL,
+    is_selected         BIT NULL,
+    sort_order          INT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_edo_item ON fmea_evaluation_dimension_option(evaluation_item_id);
 
--- 历史问题表
 CREATE TABLE fmea_history_issue (
-    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
     evaluation_task_id  BIGINT NOT NULL,
-    fault_order_no      VARCHAR(100) COMMENT '故障单号',
-    issue_no            VARCHAR(100) COMMENT '问题编号',
-    issue_type          VARCHAR(100) COMMENT '问题类型',
-    domain              VARCHAR(100) COMMENT '涉及领域',
-    product_model       VARCHAR(200) COMMENT '产品型号',
-    issue_desc          TEXT NOT NULL COMMENT '问题描述',
-    detail_desc         TEXT COMMENT '详细说明',
-    solution            TEXT COMMENT '解决方案',
-    created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_evaluation_task_id (evaluation_task_id)
-) COMMENT '历史问题';
+    fault_order_no      NVARCHAR(100),
+    issue_no            NVARCHAR(100),
+    issue_type          NVARCHAR(100),
+    domain              NVARCHAR(100),
+    product_model       NVARCHAR(200),
+    issue_desc          NVARCHAR(MAX) NOT NULL,
+    detail_desc         NVARCHAR(MAX),
+    solution            NVARCHAR(MAX),
+    created_time        DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_hi_task ON fmea_history_issue(evaluation_task_id);
 
--- 历史问题库
 CREATE TABLE fmea_history_issue_library (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    bg              VARCHAR(50),
-    domain          VARCHAR(100),
-    fault_order_no  VARCHAR(100),
-    issue_no        VARCHAR(100),
-    issue_type      VARCHAR(100),
-    product_model   VARCHAR(200),
-    issue_desc      TEXT NOT NULL,
-    detail_desc     TEXT,
-    solution        TEXT,
-    source_project  VARCHAR(200),
-    entry_time      DATETIME,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_bg_domain (bg, domain)
-) COMMENT '历史问题库';
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    bg              NVARCHAR(50),
+    domain          NVARCHAR(100),
+    fault_order_no  NVARCHAR(100),
+    issue_no        NVARCHAR(100),
+    issue_type      NVARCHAR(100),
+    product_model   NVARCHAR(200),
+    issue_desc      NVARCHAR(MAX) NOT NULL,
+    detail_desc     NVARCHAR(MAX),
+    solution        NVARCHAR(MAX),
+    source_project  NVARCHAR(200),
+    entry_time      DATETIME2,
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_hil_bg_domain ON fmea_history_issue_library(bg, domain);
 ```
 
-#### 6.1.3 DRBFM分析域
+#### 6.2.3 DRBFM分析域
 
 ```sql
--- 分析任务表
 CREATE TABLE fmea_analysis_task (
-    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
     project_id          BIGINT NOT NULL,
     evaluation_task_id  BIGINT NOT NULL,
-    level               VARCHAR(20) NOT NULL COMMENT 'system/part',
-    status              VARCHAR(30) NOT NULL COMMENT 'structure/function/failure/baseline/review/approval/completed',
-    responsible         VARCHAR(64) COMMENT '负责人',
-    created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_deleted          TINYINT(1) DEFAULT 0,
-    INDEX idx_project_id (project_id),
-    INDEX idx_evaluation_task_id (evaluation_task_id)
-) COMMENT '分析任务';
+    level               NVARCHAR(20) NOT NULL,
+    status              NVARCHAR(30) NOT NULL,
+    responsible         NVARCHAR(64),
+    created_time        DATETIME2 DEFAULT GETDATE(),
+    updated_time        DATETIME2 DEFAULT GETDATE(),
+    is_deleted          BIT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_at_project ON fmea_analysis_task(project_id);
+CREATE NONCLUSTERED INDEX idx_fmea_at_eval ON fmea_analysis_task(evaluation_task_id);
 
--- 结构框图表
 CREATE TABLE fmea_structure_diagram (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id BIGINT NOT NULL,
-    lark_doc_id     VARCHAR(100) COMMENT '飞书文档ID',
-    lark_board_id   VARCHAR(100) COMMENT '飞书画板ID',
+    lark_doc_id     NVARCHAR(100),
+    lark_board_id   NVARCHAR(100),
+    lark_board_url  NVARCHAR(500),
     version         INT DEFAULT 1,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_analysis_task_id (analysis_task_id)
-) COMMENT '结构框图';
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_sd_task ON fmea_structure_diagram(analysis_task_id);
 
--- 结构节点(无限层级树)
 CREATE TABLE fmea_structure_node (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     diagram_id      BIGINT NOT NULL,
     parent_id       BIGINT DEFAULT 0,
     level_num       INT DEFAULT 0,
-    name            VARCHAR(200) NOT NULL,
-    risk_level      VARCHAR(10) COMMENT 'H/M/L',
+    name            NVARCHAR(200) NOT NULL,
+    risk_level      NVARCHAR(10),
     sort_order      INT DEFAULT 0,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_diagram_id (diagram_id),
-    INDEX idx_parent_id (parent_id)
-) COMMENT '结构节点';
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_sn_diagram ON fmea_structure_node(diagram_id);
+CREATE NONCLUSTERED INDEX idx_fmea_sn_parent ON fmea_structure_node(parent_id);
 
--- 结构边/连接
 CREATE TABLE fmea_structure_edge (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     diagram_id      BIGINT NOT NULL,
     source_node_id  BIGINT NOT NULL,
     target_node_id  BIGINT NOT NULL,
-    interface_type  VARCHAR(20) NOT NULL COMMENT 'physical/material/energy/signal',
-    direction       VARCHAR(20) NOT NULL DEFAULT 'none' COMMENT 'unidirectional/bidirectional/none',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_diagram_id (diagram_id)
-) COMMENT '结构边/连接';
+    interface_type  NVARCHAR(20) NOT NULL,
+    direction       NVARCHAR(20) NOT NULL DEFAULT 'none',
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_se_diagram ON fmea_structure_edge(diagram_id);
 
--- 接口表格
 CREATE TABLE fmea_interface_table (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     diagram_id      BIGINT NOT NULL,
-    source_node     VARCHAR(200) NOT NULL,
-    target_node     VARCHAR(200) NOT NULL,
-    function_desc   VARCHAR(500),
-    function_type   VARCHAR(20) COMMENT 'physical/material/energy/signal',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_diagram_id (diagram_id)
-) COMMENT '接口表格';
+    source_node     NVARCHAR(200) NOT NULL,
+    target_node     NVARCHAR(200) NOT NULL,
+    function_desc   NVARCHAR(500),
+    function_type   NVARCHAR(20),
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_it_diagram ON fmea_interface_table(diagram_id);
 
--- 功能矩阵
 CREATE TABLE fmea_function_matrix (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id BIGINT NOT NULL,
     version         INT DEFAULT 1,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_analysis_task_id (analysis_task_id)
-) COMMENT '功能矩阵';
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fm_task ON fmea_function_matrix(analysis_task_id);
 
--- 功能项
 CREATE TABLE fmea_function_item (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     matrix_id       BIGINT NOT NULL,
-    description     VARCHAR(500) NOT NULL,
-    owner_node_id   BIGINT COMMENT '所属结构节点',
-    abundance_order INT DEFAULT 0 COMMENT '丰度排序(关联接口数)',
-    source          VARCHAR(20) DEFAULT 'edge' COMMENT 'edge/ai_attachment',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_matrix_id (matrix_id)
-) COMMENT '功能项';
+    description     NVARCHAR(500) NOT NULL,
+    owner_node_id   BIGINT,
+    abundance_order INT DEFAULT 0,
+    source          NVARCHAR(20) DEFAULT 'edge',
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fi_matrix ON fmea_function_item(matrix_id);
 
--- 功能-节点映射
 CREATE TABLE fmea_function_mapping (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     matrix_id       BIGINT NOT NULL,
     function_id     BIGINT NOT NULL,
     node_id         BIGINT NOT NULL,
-    is_related      TINYINT(1) DEFAULT 0,
-    risk_level      VARCHAR(10) COMMENT 'H/M/L',
-    INDEX idx_matrix_id (matrix_id)
-) COMMENT '功能-节点映射';
+    is_related      BIT DEFAULT 0,
+    risk_level      NVARCHAR(10)
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fmp_matrix ON fmea_function_mapping(matrix_id);
 
--- 失效分析
 CREATE TABLE fmea_failure_analysis (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id BIGINT NOT NULL,
     version         INT DEFAULT 1,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_analysis_task_id (analysis_task_id)
-) COMMENT '失效分析';
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fa_task ON fmea_failure_analysis(analysis_task_id);
 
--- AI生成临时表
 CREATE TABLE fmea_ai_generation_temp (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id BIGINT NOT NULL,
-    generation_type VARCHAR(30) NOT NULL COMMENT 'failure_mode/failure_cause/failure_effect/preventive/detection/sod',
-    content         JSON NOT NULL COMMENT '生成内容(JSON)',
-    is_adopted      TINYINT(1) DEFAULT 0,
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_analysis_task_type (analysis_task_id, generation_type)
-) COMMENT 'AI生成临时表';
+    generation_type NVARCHAR(30) NOT NULL,
+    content         NVARCHAR(MAX) NOT NULL,
+    is_adopted      BIT DEFAULT 0,
+    created_at      DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_aigt_task_type ON fmea_ai_generation_temp(analysis_task_id, generation_type);
 
--- 失效模式
 CREATE TABLE fmea_failure_mode (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_id     BIGINT NOT NULL,
     function_id     BIGINT,
-    mode_type       VARCHAR(20) NOT NULL COMMENT 'abnormal/reverse/accompany/excess/reduce/partial/blank',
-    description     TEXT NOT NULL,
-    source          VARCHAR(20) DEFAULT 'ai' COMMENT 'ai/history/manual',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_analysis_id (analysis_id)
-) COMMENT '失效模式';
+    mode_type       NVARCHAR(20) NOT NULL,
+    description     NVARCHAR(MAX) NOT NULL,
+    source          NVARCHAR(20) DEFAULT 'ai',
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fm_analysis ON fmea_failure_mode(analysis_id);
 
--- 失效原因
 CREATE TABLE fmea_failure_cause (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     mode_id         BIGINT NOT NULL,
-    cause_dimension VARCHAR(30) NOT NULL COMMENT 'design/manufacture/stress/wear/interaction/composite',
-    description     TEXT NOT NULL,
-    change_point_ref VARCHAR(200) COMMENT '关联变更点',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_mode_id (mode_id)
-) COMMENT '失效原因';
+    cause_dimension NVARCHAR(30) NOT NULL,
+    description     NVARCHAR(MAX) NOT NULL,
+    change_point_ref NVARCHAR(200),
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fc_mode ON fmea_failure_cause(mode_id);
 
--- 失效影响
 CREATE TABLE fmea_failure_effect (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     mode_id         BIGINT NOT NULL,
-    effect_level    VARCHAR(20) NOT NULL COMMENT 'system/machine/customer',
-    description     TEXT NOT NULL,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_mode_id (mode_id)
-) COMMENT '失效影响';
+    effect_level    NVARCHAR(20) NOT NULL,
+    description     NVARCHAR(MAX) NOT NULL,
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fe_mode ON fmea_failure_effect(mode_id);
 
--- 预防措施
 CREATE TABLE fmea_preventive_measure (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     cause_id        BIGINT NOT NULL,
-    description     TEXT NOT NULL,
-    measure_type    VARCHAR(20) DEFAULT 'design' COMMENT 'design/process/monitor',
-    source          VARCHAR(20) DEFAULT 'ai',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_cause_id (cause_id)
-) COMMENT '预防措施';
+    description     NVARCHAR(MAX) NOT NULL,
+    measure_type    NVARCHAR(20) DEFAULT 'design',
+    source          NVARCHAR(20) DEFAULT 'ai',
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_pm_cause ON fmea_preventive_measure(cause_id);
 
--- 探测措施
 CREATE TABLE fmea_detection_measure (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     cause_id        BIGINT NOT NULL,
-    phase           VARCHAR(100) COMMENT '探测阶段',
-    target          VARCHAR(200) COMMENT '探测对象',
-    method          VARCHAR(500) COMMENT '探测方法',
-    source          VARCHAR(20) DEFAULT 'ai',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_cause_id (cause_id)
-) COMMENT '探测措施';
+    phase           NVARCHAR(100),
+    target          NVARCHAR(200),
+    method          NVARCHAR(500),
+    source          NVARCHAR(20) DEFAULT 'ai',
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_dm_cause ON fmea_detection_measure(cause_id);
 
--- 优化措施
 CREATE TABLE fmea_optimization_measure (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     cause_id        BIGINT NOT NULL,
-    description     TEXT NOT NULL,
-    source          VARCHAR(20) DEFAULT 'ai',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_cause_id (cause_id)
-) COMMENT '优化措施';
+    description     NVARCHAR(MAX) NOT NULL,
+    source          NVARCHAR(20) DEFAULT 'ai',
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_om_cause ON fmea_optimization_measure(cause_id);
 
--- SOD评分
 CREATE TABLE fmea_sod_rating (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     failure_mode_id BIGINT NOT NULL,
-    severity        INT COMMENT '严重度',
-    occurrence      INT COMMENT '发生度',
-    detection       INT COMMENT '探测度',
-    ap_level        VARCHAR(5) COMMENT 'H/M/L',
-    mode_type       TINYINT DEFAULT 2 COMMENT '1=模式1(软件) 2=模式2(硬件)',
-    rater           VARCHAR(64),
-    ai_suggested_s  INT COMMENT 'AI建议严重度',
-    ai_suggested_o  INT COMMENT 'AI建议发生度',
-    ai_suggested_d  INT COMMENT 'AI建议探测度',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE INDEX idx_failure_mode_id (failure_mode_id)
-) COMMENT 'SOD评分';
+    severity        INT,
+    occurrence      INT,
+    detection       INT,
+    ap_level        NVARCHAR(5),
+    mode_type       TINYINT DEFAULT 2,
+    rater           NVARCHAR(64),
+    ai_suggested_s  INT,
+    ai_suggested_o  INT,
+    ai_suggested_d  INT,
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE UNIQUE NONCLUSTERED INDEX idx_fmea_sod_mode ON fmea_sod_rating(failure_mode_id);
 
--- SOD评价标准
 CREATE TABLE fmea_sod_standard (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    scope           VARCHAR(20) NOT NULL COMMENT 'company/bg',
-    bg_id           VARCHAR(50) COMMENT 'BG标识(scope=bg时)',
-    mode_type       TINYINT NOT NULL DEFAULT 2 COMMENT '1=模式1 2=模式2',
-    rating_type     VARCHAR(1) NOT NULL COMMENT 'S/O/D',
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    scope           NVARCHAR(20) NOT NULL,
+    bg_id           NVARCHAR(50),
+    mode_type       TINYINT NOT NULL DEFAULT 2,
+    rating_type     NVARCHAR(1) NOT NULL,
     level           INT NOT NULL,
     score           INT NOT NULL,
-    description     VARCHAR(500),
-    INDEX idx_scope_type (scope, bg_id, mode_type, rating_type)
-) COMMENT 'SOD评价标准';
+    description     NVARCHAR(500)
+);
+CREATE NONCLUSTERED INDEX idx_fmea_ss_scope ON fmea_sod_standard(scope, bg_id, mode_type, rating_type);
 
--- AP参考表
 CREATE TABLE fmea_ap_reference (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    s_range         VARCHAR(10) NOT NULL,
-    o_range         VARCHAR(10) NOT NULL,
-    d_range         VARCHAR(10) NOT NULL,
-    ap_level        VARCHAR(5) NOT NULL COMMENT 'H/M/L'
-) COMMENT 'AP参考表(固定100行)';
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    s_range         NVARCHAR(10) NOT NULL,
+    o_range         NVARCHAR(10) NOT NULL,
+    d_range         NVARCHAR(10) NOT NULL,
+    ap_level        NVARCHAR(5) NOT NULL
+);
 ```
 
-#### 6.1.4 基线与落地跟踪域
+#### 6.2.4 基线与落地跟踪域
 
 ```sql
--- 基线
 CREATE TABLE fmea_baseline (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id BIGINT NOT NULL,
     version         INT DEFAULT 1,
-    output_mode     TINYINT DEFAULT 1 COMMENT '1=模式一 2=模式二',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_analysis_task_id (analysis_task_id)
-) COMMENT '基线';
+    output_mode     TINYINT DEFAULT 1,
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_bl_task ON fmea_baseline(analysis_task_id);
 
--- 基线项
 CREATE TABLE fmea_baseline_item (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     baseline_id     BIGINT NOT NULL,
     measure_id      BIGINT NOT NULL,
-    measure_type    VARCHAR(20) NOT NULL COMMENT 'preventive/detection/optimization',
-    is_landing      TINYINT(1) DEFAULT 1 COMMENT '是否落地',
-    landing_owner   VARCHAR(64) COMMENT '落地负责人',
-    landing_date    DATE COMMENT '落地时间',
-    source          VARCHAR(20) DEFAULT 'ai' COMMENT 'ai/history',
-    item_type       VARCHAR(20) DEFAULT 'new' COMMENT 'new/optimize',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_baseline_id (baseline_id)
-) COMMENT '基线项';
+    measure_type    NVARCHAR(20) NOT NULL,
+    is_landing      BIT DEFAULT 1,
+    landing_owner   NVARCHAR(64),
+    landing_date    DATE,
+    source          NVARCHAR(20) DEFAULT 'ai',
+    item_type       NVARCHAR(20) DEFAULT 'new',
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_bi_baseline ON fmea_baseline_item(baseline_id);
 
--- 落地跟踪任务
 CREATE TABLE fmea_landing_task (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     baseline_id     BIGINT NOT NULL,
-    status          VARCHAR(20) NOT NULL COMMENT 'pending/completed',
-    sla_date        DATE COMMENT 'SLA截止日期',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_baseline_id (baseline_id)
-) COMMENT '落地跟踪任务';
+    status          NVARCHAR(20) NOT NULL,
+    sla_date        DATE,
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_lt_baseline ON fmea_landing_task(baseline_id);
 
--- 落地项
 CREATE TABLE fmea_landing_item (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     landing_task_id BIGINT NOT NULL,
     baseline_item_id BIGINT NOT NULL,
-    landing_status  VARCHAR(20) NOT NULL COMMENT 'completed/failed/unable/delayed',
-    new_owner       VARCHAR(64) COMMENT '延期时新负责人',
-    new_date        DATE COMMENT '延期时新日期',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_landing_task_id (landing_task_id)
-) COMMENT '落地项';
+    landing_status  NVARCHAR(20) NOT NULL,
+    new_owner       NVARCHAR(64),
+    new_date        DATE,
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_li_task ON fmea_landing_item(landing_task_id);
 
--- 落地审核
 CREATE TABLE fmea_landing_audit (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     landing_item_id BIGINT NOT NULL,
-    auditor_id      VARCHAR(64) NOT NULL,
-    conclusion      VARCHAR(20) NOT NULL COMMENT 'approved/rejected',
-    opinion         TEXT,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_landing_item_id (landing_item_id)
-) COMMENT '落地审核';
+    auditor_id      NVARCHAR(64) NOT NULL,
+    conclusion      NVARCHAR(20) NOT NULL,
+    opinion         NVARCHAR(MAX),
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_la_item ON fmea_landing_audit(landing_item_id);
 ```
 
-#### 6.1.5 评审与审批域
+#### 6.2.5 评审与审批域
 
 ```sql
--- 评审
 CREATE TABLE fmea_review (
-    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id    BIGINT NOT NULL,
-    status              VARCHAR(20) NOT NULL COMMENT 'pending/in_progress/opinion_closure/completed',
-    review_date         DATE NOT NULL COMMENT '评审日期',
-    is_level1_project   TINYINT(1) COMMENT '是否1级项目(从PMS获取)',
-    opinion_rate        DECIMAL(5,4) COMMENT '意见率',
-    ai_minutes          LONGTEXT COMMENT 'AI生成评审纪要',
-    created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_analysis_task_id (analysis_task_id)
-) COMMENT '评审';
+    status              NVARCHAR(20) NOT NULL,
+    review_date         DATE NOT NULL,
+    is_level1_project   BIT,
+    opinion_rate        DECIMAL(5,4),
+    ai_minutes          NVARCHAR(MAX),
+    created_time        DATETIME2 DEFAULT GETDATE(),
+    updated_time        DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_rv_task ON fmea_review(analysis_task_id);
 
--- 评审人
 CREATE TABLE fmea_reviewer (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     review_id       BIGINT NOT NULL,
-    role            VARCHAR(50) NOT NULL COMMENT '评审角色',
-    user_id         VARCHAR(64) NOT NULL,
-    conclusion      VARCHAR(20) COMMENT 'approved/rejected/pending',
-    is_closed       TINYINT(1) DEFAULT 0 COMMENT '意见是否闭环',
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_review_id (review_id)
-) COMMENT '评审人';
+    role            NVARCHAR(50) NOT NULL,
+    user_id         NVARCHAR(64) NOT NULL,
+    conclusion      NVARCHAR(20),
+    is_closed       BIT DEFAULT 0,
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_rr_review ON fmea_reviewer(review_id);
 
--- 评审意见闭环
 CREATE TABLE fmea_review_opinion (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     reviewer_id     BIGINT NOT NULL,
-    opinion_content TEXT NOT NULL COMMENT '意见内容',
-    response        TEXT COMMENT '负责人答复',
-    is_closed       TINYINT(1) DEFAULT 0,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_reviewer_id (reviewer_id)
-) COMMENT '评审意见闭环';
+    opinion_content NVARCHAR(MAX) NOT NULL,
+    response        NVARCHAR(MAX),
+    is_closed       BIT DEFAULT 0,
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_ro_reviewer ON fmea_review_opinion(reviewer_id);
 
--- 会议纪要
 CREATE TABLE fmea_meeting_minutes (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     review_id       BIGINT NOT NULL,
-    content         LONGTEXT NOT NULL,
-    upload_time     DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_review_id (review_id)
-) COMMENT '会议纪要';
+    content         NVARCHAR(MAX) NOT NULL,
+    upload_time     DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_mm_review ON fmea_meeting_minutes(review_id);
 
--- 评审通知记录
 CREATE TABLE fmea_review_notification (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     review_id       BIGINT NOT NULL,
     reviewer_id     BIGINT NOT NULL,
-    notify_type     VARCHAR(20) NOT NULL COMMENT 'one_week/one_day',
-    notify_time     DATETIME NOT NULL COMMENT '计划通知时间',
-    is_sent         TINYINT(1) DEFAULT 0,
-    sent_time       DATETIME COMMENT '实际发送时间',
-    INDEX idx_review_id (review_id),
-    INDEX idx_notify_time (notify_time, is_sent)
-) COMMENT '评审通知记录';
+    notify_type     NVARCHAR(20) NOT NULL,
+    notify_time     DATETIME2 NOT NULL,
+    is_sent         BIT DEFAULT 0,
+    sent_time       DATETIME2
+);
+CREATE NONCLUSTERED INDEX idx_fmea_rn_review ON fmea_review_notification(review_id);
+CREATE NONCLUSTERED INDEX idx_fmea_rn_time ON fmea_review_notification(notify_time, is_sent);
 
--- 审批
 CREATE TABLE fmea_approval (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id BIGINT NOT NULL,
-    approval_level  TINYINT NOT NULL COMMENT '1/2/3',
-    approver_id     VARCHAR(64) NOT NULL,
-    conclusion      VARCHAR(20) COMMENT 'approved/rejected/pending',
-    opinion         TEXT,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_analysis_task_id (analysis_task_id)
-) COMMENT '审批';
+    approval_level  TINYINT NOT NULL,
+    approver_id     NVARCHAR(64) NOT NULL,
+    conclusion      NVARCHAR(20),
+    opinion         NVARCHAR(MAX),
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_ap_task ON fmea_approval(analysis_task_id);
 ```
 
-#### 6.1.6 基线库域
+#### 6.2.6 基线库域
 
 ```sql
--- 基线库
 CREATE TABLE fmea_baseline_library (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    bg              VARCHAR(50) NOT NULL,
-    domain          VARCHAR(100),
-    entry_time      DATETIME,
-    source_project  VARCHAR(200),
-    landing_owner   VARCHAR(64),
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    bg              NVARCHAR(50) NOT NULL,
+    domain          NVARCHAR(100),
+    entry_time      DATETIME2,
+    source_project  NVARCHAR(200),
+    landing_owner   NVARCHAR(64),
     version         INT DEFAULT 1,
-    change_desc     VARCHAR(500),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_deleted      TINYINT(1) DEFAULT 0,
-    INDEX idx_bg_domain (bg, domain)
-) COMMENT '基线库';
+    change_desc     NVARCHAR(500),
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE(),
+    is_deleted      BIT DEFAULT 0
+);
+CREATE NONCLUSTERED INDEX idx_fmea_bll_bg_domain ON fmea_baseline_library(bg, domain);
 
--- 基线库版本记录
 CREATE TABLE fmea_baseline_library_version (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     library_id      BIGINT NOT NULL,
     version         INT NOT NULL,
-    change_content  TEXT,
-    changed_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    changed_by      VARCHAR(64),
-    INDEX idx_library_id (library_id)
-) COMMENT '基线库版本记录';
+    change_content  NVARCHAR(MAX),
+    changed_at      DATETIME2 DEFAULT GETDATE(),
+    changed_by      NVARCHAR(64)
+);
+CREATE NONCLUSTERED INDEX idx_fmea_bllv_library ON fmea_baseline_library_version(library_id);
 
--- 失效库
 CREATE TABLE fmea_failure_library (
-    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
     baseline_library_id BIGINT NOT NULL,
-    mode                VARCHAR(200),
-    cause               TEXT,
-    effect              TEXT,
+    mode                NVARCHAR(200),
+    cause               NVARCHAR(MAX),
+    effect              NVARCHAR(MAX),
     severity            INT,
-    created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_baseline_library_id (baseline_library_id)
-) COMMENT '失效库';
+    created_time        DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fl_library ON fmea_failure_library(baseline_library_id);
 
--- 措施库
 CREATE TABLE fmea_measure_library (
-    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
     failure_library_id  BIGINT NOT NULL,
-    description         TEXT NOT NULL,
-    measure_type        VARCHAR(20) NOT NULL COMMENT 'preventive/detection/optimization',
-    source              VARCHAR(50) COMMENT '来源项目',
-    created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_failure_library_id (failure_library_id)
-) COMMENT '措施库';
+    description         NVARCHAR(MAX) NOT NULL,
+    measure_type        NVARCHAR(20) NOT NULL,
+    source              NVARCHAR(50),
+    created_time        DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_ml_failure ON fmea_measure_library(failure_library_id);
 
--- 功能库
 CREATE TABLE fmea_function_library (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    domain          VARCHAR(100) NOT NULL,
-    description     VARCHAR(500) NOT NULL,
-    owner_node_type VARCHAR(100),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_domain (domain)
-) COMMENT '功能库';
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    domain          NVARCHAR(100) NOT NULL,
+    description     NVARCHAR(500) NOT NULL,
+    owner_node_type NVARCHAR(100),
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_fl_domain ON fmea_function_library(domain);
 
--- 入库审批
 CREATE TABLE fmea_approval_inbound (
-    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
     baseline_library_id BIGINT NOT NULL,
-    approver_id         VARCHAR(64) NOT NULL,
-    conclusion          VARCHAR(20) COMMENT 'approved/rejected/pending',
-    opinion             TEXT,
-    reject_reason       TEXT,
-    created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_baseline_library_id (baseline_library_id)
-) COMMENT '入库审批';
+    approver_id         NVARCHAR(64) NOT NULL,
+    conclusion          NVARCHAR(20),
+    opinion             NVARCHAR(MAX),
+    reject_reason       NVARCHAR(MAX),
+    created_time        DATETIME2 DEFAULT GETDATE(),
+    updated_time        DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_ai_library ON fmea_approval_inbound(baseline_library_id);
 ```
 
-#### 6.1.7 系统支撑域
+#### 6.2.7 系统支撑域
 
 ```sql
--- 系统配置
 CREATE TABLE fmea_configuration (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    config_type     VARCHAR(50) NOT NULL COMMENT '配置类型',
-    scope           VARCHAR(20) NOT NULL COMMENT 'company/bg/domain',
-    scope_id        VARCHAR(50) COMMENT 'BG/域标识',
-    config_key      VARCHAR(100) NOT NULL,
-    config_value    TEXT,
-    description     VARCHAR(500),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE INDEX idx_type_scope_key (config_type, scope, scope_id, config_key)
-) COMMENT '系统配置';
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    config_type     NVARCHAR(50) NOT NULL,
+    scope           NVARCHAR(20) NOT NULL,
+    scope_id        NVARCHAR(50),
+    config_key      NVARCHAR(100) NOT NULL,
+    config_value    NVARCHAR(MAX),
+    description     NVARCHAR(500),
+    created_time    DATETIME2 DEFAULT GETDATE(),
+    updated_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE UNIQUE NONCLUSTERED INDEX idx_fmea_cfg_unique ON fmea_configuration(config_type, scope, scope_id, config_key);
 
--- 版本历史
 CREATE TABLE fmea_version_history (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    entity_type     VARCHAR(50) NOT NULL,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    entity_type     NVARCHAR(50) NOT NULL,
     entity_id       BIGINT NOT NULL,
     version         INT NOT NULL,
-    tr_stage        VARCHAR(20),
-    change_desc     VARCHAR(500),
-    change_snapshot JSON COMMENT '变更快照',
-    created_by      VARCHAR(64),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_entity (entity_type, entity_id)
-) COMMENT '版本历史';
+    tr_stage        NVARCHAR(20),
+    change_desc     NVARCHAR(500),
+    change_snapshot NVARCHAR(MAX),
+    created_by      NVARCHAR(64),
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_vh_entity ON fmea_version_history(entity_type, entity_id);
 
--- 审计日志
 CREATE TABLE fmea_audit_log (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id         VARCHAR(64) NOT NULL,
-    action          VARCHAR(50) NOT NULL COMMENT 'CREATE/UPDATE/DELETE/APPROVE/REJECT',
-    resource_type   VARCHAR(50) NOT NULL,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
+    user_id         NVARCHAR(64) NOT NULL,
+    action          NVARCHAR(50) NOT NULL,
+    resource_type   NVARCHAR(50) NOT NULL,
     resource_id     BIGINT,
-    detail          JSON,
-    ip_address      VARCHAR(50),
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user_time (user_id, created_time),
-    INDEX idx_resource (resource_type, resource_id),
-    INDEX idx_created_time (created_time)
-) COMMENT '审计日志';
+    detail          NVARCHAR(MAX),
+    ip_address      NVARCHAR(50),
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_al_user ON fmea_audit_log(user_id, created_time);
+CREATE NONCLUSTERED INDEX idx_fmea_al_resource ON fmea_audit_log(resource_type, resource_id);
+CREATE NONCLUSTERED INDEX idx_fmea_al_time ON fmea_audit_log(created_time);
 
--- AI采纳率统计
 CREATE TABLE fmea_ai_adoption_stat (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
     analysis_task_id BIGINT NOT NULL,
-    generation_type VARCHAR(30) NOT NULL,
+    generation_type NVARCHAR(30) NOT NULL,
     total_count     INT DEFAULT 0,
     adopted_count   INT DEFAULT 0,
     adoption_rate   DECIMAL(5,4),
     stat_date       DATE,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_task_type (analysis_task_id, generation_type)
-) COMMENT 'AI采纳率统计';
+    created_time    DATETIME2 DEFAULT GETDATE()
+);
+CREATE NONCLUSTERED INDEX idx_fmea_aas_task ON fmea_ai_adoption_stat(analysis_task_id, generation_type);
 ```
 
-### 6.2 数据库设计说明
+### 6.3 数据库设计说明
 
-#### 6.2.1 无限层级树结构
+#### 6.3.1 SQL Server 特有注意事项
+
+| 事项 | 说明 |
+|------|------|
+| updated_time | SQL Server不支持ON UPDATE，通过应用层Service统一设置，或使用触发器 |
+| JSON存储 | 使用NVARCHAR(MAX)存储，SQL Server 2016+支持ISJSON/FOR JSON |
+| 字符串 | 统一使用NVARCHAR支持中文，避免VARCHAR乱码 |
+| 分页 | MyBatis Plus已适配SQL Server分页语法(OFFSET FETCH) |
+| 索引 | 默认创建NONCLUSTERED INDEX，主键为CLUSTERED |
+| BIT类型 | SQL Server BIT存0/1，非NULL，需注意NULL语义用TINYINT替代 |
+
+#### 6.3.2 无限层级树结构
 
 变更点清单项（`fmea_change_list_item`）和结构节点（`fmea_structure_node`）均采用 `parent_id` 方案实现无限层级树结构：
 
@@ -1010,9 +1063,9 @@ CREATE TABLE fmea_ai_adoption_stat (
 - `level_num` 记录层级深度，便于查询和排序
 - `item_id`（变更点清单项）作为业务ID，是跨协作人合并的依据
 
-#### 6.2.2 枚举字段规范
+#### 6.3.3 枚举字段规范
 
-所有枚举字段使用 VARCHAR 存储枚举字符串，Java侧通过枚举类约束：
+所有枚举字段使用 NVARCHAR 存储枚举字符串，Java侧通过枚举类约束：
 
 | 表 | 字段 | Java枚举 |
 |----|------|----------|
@@ -1023,26 +1076,182 @@ CREATE TABLE fmea_ai_adoption_stat (
 | fmea_failure_effect | effect_level | EffectLevel{SYSTEM, MACHINE, CUSTOMER} |
 | fmea_evaluation_item | risk_level | RiskLevel{H, M, L} |
 
-#### 6.2.3 通用字段规范
+#### 6.3.4 通用字段规范
 
 所有业务表包含以下通用字段：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | BIGINT AUTO_INCREMENT | 主键 |
-| created_time | DATETIME | 创建时间 |
-| updated_time | DATETIME | 更新时间（部分表） |
-| is_deleted | TINYINT(1) | 逻辑删除（部分表） |
+| id | BIGINT IDENTITY(1,1) | 主键 |
+| created_time | DATETIME2 | 创建时间 |
+| updated_time | DATETIME2 | 更新时间（部分表） |
+| is_deleted | BIT | 逻辑删除（部分表） |
 
 ---
 
-## 7. 外部系统集成设计
+## 7. 前端设计
 
-### 7.1 飞书服务封装（LarkService）
+### 7.1 整体方案
+
+前端采用 **FreeMarker(FTL)模板 + EasyUI** 的服务端渲染方案：
+
+- **页面渲染**：Controller返回FTL视图名，Spring Boot集成FreeMarker自动渲染
+- **UI组件**：EasyUI提供DataGrid、Dialog、Form、Tabs等企业级组件
+- **数据交互**：jQuery.ajax与后端交互，JSON格式
+- **画板嵌入**：飞书画板通过iframe嵌入FTL页面
+
+### 7.2 FreeMarker配置
+
+```yaml
+spring:
+  freemarker:
+    template-loader-path: classpath:/templates/
+    suffix: .ftl
+    charset: UTF-8
+    cache: false
+    content-type: text/html;charset=UTF-8
+    settings:
+      number_format: 0.##
+      datetime_format: yyyy-MM-dd HH:mm:ss
+      date_format: yyyy-MM-dd
+```
+
+### 7.3 FTL布局模板
+
+```html
+<!-- layout.ftl -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>FMEA 2.0 - ${pageTitle!''}</title>
+    <link rel="stylesheet" href="/static/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="/static/easyui/themes/icon.css">
+    <link rel="stylesheet" href="/static/css/fmea.css">
+    <script src="/static/easyui/jquery.min.js"></script>
+    <script src="/static/easyui/jquery.easyui.min.js"></script>
+    <script src="/static/easyui/locale/easyui-lang-zh_CN.js"></script>
+</head>
+<body class="easyui-layout">
+    <div data-options="region:'north'" style="height:60px">
+        <#include "common/header.ftl">
+    </div>
+    <div data-options="region:'west',title:'导航菜单'" style="width:200px">
+        <#include "common/sidebar.ftl">
+    </div>
+    <div data-options="region:'center'">
+        <#nested>
+    </div>
+</body>
+</html>
+```
+
+### 7.4 Controller返回模式
+
+```java
+@Controller
+@RequestMapping("/evaluation")
+public class EvaluationController {
+
+    @GetMapping("/list")
+    public String list(Model model) {
+        return "evaluation/list";
+    }
+
+    @PostMapping("/submit")
+    @ResponseBody
+    public Result submit(@RequestBody EvaluationSubmitRequest request) {
+        return Result.success(evaluationService.submit(request));
+    }
+
+    @GetMapping("/data")
+    @ResponseBody
+    public PageResult<EvaluationItemVO> getData(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int rows,
+            @RequestParam(required = false) String projectId) {
+        return evaluationService.queryPage(page, rows, projectId);
+    }
+}
+```
+
+**返回模式说明**：
+- 页面跳转：返回FTL视图名（String），Spring MVC渲染模板
+- 数据接口：`@ResponseBody` 返回JSON，EasyUI DataGrid通过URL加载
+
+### 7.5 EasyUI DataGrid典型用法
+
+```html
+<!-- evaluation/list.ftl -->
+<table id="evalGrid" class="easyui-datagrid"
+       data-options="url:'/evaluation/data', method:'get',
+                     pagination:true, rownumbers:true, fit:true,
+                     toolbar:'#evalToolbar'">
+    <thead>
+        <tr>
+            <th data-options="field:'id',width:80">ID</th>
+            <th data-options="field:'projectName',width:200">项目名称</th>
+            <th data-options="field:'level',width:80">层级</th>
+            <th data-options="field:'status',width:100,formatter:statusFormatter">状态</th>
+            <th data-options="field:'riskScore',width:80">风险评分</th>
+        </tr>
+    </thead>
+</table>
+```
+
+### 7.6 飞书画板iframe嵌入
+
+结构框图页面通过iframe嵌入飞书画板：
+
+```html
+<!-- analysis/structure.ftl -->
+<div class="easyui-tabs" data-options="fit:true">
+    <div title="结构框图">
+        <iframe id="boardFrame"
+                src="${larkBoardUrl!''}"
+                style="width:100%; height:100%; border:none;">
+        </iframe>
+    </div>
+    <div title="接口表格">
+        <table id="interfaceGrid" class="easyui-datagrid">...</table>
+    </div>
+</div>
+```
+
+**iframe嵌入方案说明**：
+
+| 项目 | 说明 |
+|------|------|
+| URL来源 | 后端调用飞书API创建文档+画板后，获取画板URL存入`fmea_structure_diagram.lark_board_url` |
+| URL格式 | `https://bytedance.larkoffice.com/whiteboard/docx/{board_id}` |
+| 权限传递 | 飞书应用需有文档权限，用户通过CAS登录后需与飞书账号关联 |
+| 数据回读 | 用户在画板中编辑完成后，后端通过飞书API读取画板节点和边数据 |
+| 导出 | 通过飞书API导出画板为图片/PDF |
+
+### 7.7 EasyUI组件使用映射
+
+| 业务场景 | EasyUI组件 | 说明 |
+|----------|------------|------|
+| 列表页面 | datagrid | 分页、排序、行选择 |
+| 表单编辑 | dialog + form | 弹窗表单 |
+| 多步骤流程 | tabs / accordion | 分析任务步骤切换 |
+| 下拉选择 | combobox | BG/领域/角色选择 |
+| 树形选择 | combotree | 结构层级选择 |
+| 日期选择 | datebox | 评审日期/落地时间 |
+| 文件上传 | filebox | Excel/Word导入 |
+| 消息提示 | messager | 操作成功/失败提示 |
+| 确认对话框 | messager.confirm | 删除/提交确认 |
+| 选项卡 | tabs | 基线输出模式切换 |
+
+---
+
+## 8. 外部系统集成设计
+
+### 8.1 飞书服务封装（LarkService）
 
 飞书API通过 `fmea-integration-lark` 模块统一封装，业务模块仅调用服务接口，不关心API细节。
 
-#### 7.1.1 模块结构
+#### 8.1.1 模块结构
 
 ```
 com.fmea.integration.lark/
@@ -1063,7 +1272,7 @@ com.fmea.integration.lark/
     └── LarkApiException.java     # 飞书API异常
 ```
 
-#### 7.1.2 核心接口
+#### 8.1.2 核心接口
 
 ```java
 public interface LarkService {
@@ -1071,6 +1280,8 @@ public interface LarkService {
     String createDoc(String title);
 
     String createBoardInDoc(String docId, String title);
+
+    String getBoardUrl(String boardId);
 
     void updateBoardContent(String boardId, String mermaidContent);
 
@@ -1086,17 +1297,30 @@ public interface LarkService {
 }
 ```
 
-#### 7.1.3 令牌管理
+#### 8.1.3 令牌管理
 
 - 飞书API使用 `tenant_access_token` 认证
 - Token缓存至Redis，有效期2小时，提前10分钟自动刷新
 - 使用分布式锁避免并发刷新
 
-### 7.2 PMS数据直查
+#### 8.1.4 iframe嵌入流程
+
+```
+1. 用户进入结构分析步骤
+2. 后端调用LarkService.createDoc()创建飞书文档
+3. 后端调用LarkService.createBoardInDoc()在文档中创建画板
+4. 后端调用LarkService.getBoardUrl()获取画板访问URL
+5. 将URL存入fmea_structure_diagram.lark_board_url
+6. FTL模板中通过iframe嵌入该URL
+7. 用户在iframe中编辑画板
+8. 编辑完成后，后端通过LarkService.getBoardContent()回读节点和边数据
+```
+
+### 8.2 PMS数据直查
 
 PMS数据查询通过 `fmea-integration-pms` 模块封装，内部使用 `@DS("pms")` 注解切换至PMS只读数据源。
 
-#### 7.2.1 模块结构
+#### 8.2.1 模块结构
 
 ```
 com.fmea.integration.pms/
@@ -1115,7 +1339,7 @@ com.fmea.integration.pms/
     └── PmsProperties.java
 ```
 
-#### 7.2.2 核心接口
+#### 8.2.2 核心接口
 
 ```java
 public interface PmsQueryService {
@@ -1132,9 +1356,9 @@ public interface PmsQueryService {
 }
 ```
 
-### 7.3 CAS单点登录
+### 8.3 CAS单点登录
 
-#### 7.3.1 集成方式
+#### 8.3.1 集成方式
 
 基于 Spring Security + CAS Client 实现：
 
@@ -1144,7 +1368,7 @@ spring-boot-starter-security
 cas-client-support-springboot
 ```
 
-#### 7.3.2 认证流程
+#### 8.3.2 认证流程
 
 ```
 1. 用户访问FMEA系统 → Spring Security拦截未认证请求
@@ -1154,15 +1378,15 @@ cas-client-support-springboot
 5. 后续请求携带session → 无需重复登录
 ```
 
-#### 7.3.3 用户信息同步
+#### 8.3.3 用户信息同步
 
 - CAS认证成功后，从CAS返回属性中提取用户ID、姓名、部门等信息
 - 本地维护 `fmea_user` 表缓存用户基本信息，定期从CAS同步
 - 权限信息从PMS同步，不依赖CAS
 
-### 7.4 邮件服务
+### 8.4 邮件服务
 
-#### 7.4.1 模块结构
+#### 8.4.1 模块结构
 
 ```
 com.fmea.integration.email/
@@ -1172,10 +1396,10 @@ com.fmea.integration.email/
 ├── config/
 │   └── EmailProperties.java
 └── template/
-    └── EmailTemplateRenderer.java    # 邮件模板渲染
+    └── EmailTemplateRenderer.java    # 邮件模板渲染(FTL)
 ```
 
-#### 7.4.2 邮件场景
+#### 8.4.2 邮件场景
 
 | 场景 | 触发时机 | 收件人 |
 |------|----------|--------|
@@ -1186,9 +1410,9 @@ com.fmea.integration.email/
 
 ---
 
-## 8. AI模型集成设计
+## 9. AI模型集成设计
 
-### 8.1 架构设计
+### 9.1 架构设计
 
 AI模型通过 `fmea-integration-ai` 模块统一对接外部API，业务模块不直接调用AI接口。
 
@@ -1214,7 +1438,7 @@ AI模型通过 `fmea-integration-ai` 模块统一对接外部API，业务模块�
 └──────────────────────────────────────────────┘
 ```
 
-### 8.2 模块结构
+### 9.2 模块结构
 
 ```
 com.fmea.integration.ai/
@@ -1243,7 +1467,7 @@ com.fmea.integration.ai/
     └── AiServiceException.java
 ```
 
-### 8.3 调用方式
+### 9.3 调用方式
 
 | 场景 | 调用方式 | 超时 | 说明 |
 |------|----------|------|------|
@@ -1253,16 +1477,36 @@ com.fmea.integration.ai/
 | 预防/探测措施生成 | 异步 | 60s | 批量生成 |
 | SOD评分建议 | 同步 | 30s | 单条评分 |
 
-### 8.4 异步任务设计
+### 9.4 异步任务设计
 
 对于异步AI调用，采用以下流程：
 
 ```
 1. 用户点击"AI生成"按钮
 2. 后端创建异步任务，返回task_id
-3. 前端轮询任务状态(或SSE推送)
+3. 前端通过jQuery.ajax轮询任务状态
 4. AI调用完成后，结果写入fmea_ai_generation_temp表
 5. 前端获取结果，用户选择采纳
+```
+
+前端轮询示例：
+
+```javascript
+function pollAiTask(taskId) {
+    $.ajax({
+        url: '/ai/task/status?taskId=' + taskId,
+        method: 'GET',
+        success: function(result) {
+            if (result.data.status === 'COMPLETED') {
+                loadAiResult(taskId);
+            } else if (result.data.status === 'FAILED') {
+                $.messager.alert('提示', 'AI生成失败，请重试');
+            } else {
+                setTimeout(function() { pollAiTask(taskId); }, 2000);
+            }
+        }
+    });
+}
 ```
 
 异步任务状态管理：
@@ -1275,7 +1519,7 @@ public enum AiTaskStatus {
 
 任务状态存储在Redis中，key格式：`ai:task:{taskId}`，TTL 1小时。
 
-### 8.5 AI生成临时表管理
+### 9.5 AI生成临时表管理
 
 - 每次AI生成时，先删除该分析任务对应类型的旧临时数据
 - 删除与插入在同一事务中
@@ -1283,13 +1527,13 @@ public enum AiTaskStatus {
 
 ---
 
-## 9. 核心业务模块设计
+## 10. 核心业务模块设计
 
-### 9.1 流程状态机
+### 10.1 流程状态机
 
 DRBFM核心流程采用状态机管理，定义在各Service中：
 
-#### 9.1.1 评估任务状态机
+#### 10.1.1 评估任务状态机
 
 ```
 draft → submitted → approved → scored → confirmed
@@ -1306,7 +1550,7 @@ draft → submitted → approved → scored → confirmed
 | scored | 已评分 | confirmed |
 | confirmed | 已确认(生成分析任务) | — |
 
-#### 9.1.2 分析任务状态机
+#### 10.1.2 分析任务状态机
 
 ```
 structure → function → failure → baseline → review → approval → completed
@@ -1322,7 +1566,7 @@ structure → function → failure → baseline → review → approval → comp
 | approval | 审批 | 审批流程 |
 | completed | 完成 | — |
 
-### 9.2 评审通知定时任务
+### 10.2 评审通知定时任务
 
 ```java
 @Component
@@ -1337,7 +1581,7 @@ public class ReviewNotificationTask {
 }
 ```
 
-### 9.3 变更点清单合并算法
+### 10.3 变更点清单合并算法
 
 部件级评估中，协作人导入的变更点清单需合并：
 
@@ -1350,7 +1594,7 @@ public class ReviewNotificationTask {
 4. 合并后保留系统级(LEVEL=0)评估内容不变
 ```
 
-### 9.4 五维风险评估评分算法
+### 10.4 五维风险评估评分算法
 
 ```java
 public class RiskScoreCalculator {
@@ -1382,16 +1626,16 @@ public class RiskScoreCalculator {
 
 维度分数计算规则：每个维度的选项按高/中/低分组，高有3个选项、中有2个选项、低有2个选项。如果"高"组中有任一选项选中，取高分；否则看"中"组；否则看"低"组；均未选则为0。
 
-### 9.5 Excel导入导出设计
+### 10.5 Excel导入导出设计
 
-#### 9.5.1 导入
+#### 10.5.1 导入
 
 - 使用 Apache POI 读取 Excel 文件
 - 变更点清单：按标准模板解析，支持无限层级（通过Level列或缩进判断层级关系）
 - 质量策划：读取Excel各Sheet，转Markdown后由AI处理
 - 历史问题：按固定列格式解析
 
-#### 9.5.2 导出
+#### 10.5.2 导出
 
 - FMEA表单导出为Excel，使用POI模板填充方式
 - 结构框图导出为图片/PDF，通过飞书API获取
@@ -1399,9 +1643,9 @@ public class RiskScoreCalculator {
 
 ---
 
-## 10. 安全设计
+## 11. 安全设计
 
-### 10.1 认证与授权
+### 11.1 认证与授权
 
 | 层面 | 方案 |
 |------|------|
@@ -1410,18 +1654,18 @@ public class RiskScoreCalculator {
 | 会话 | Redis集中存储Session |
 | 跨域 | Nginx统一域名，无需CORS |
 
-### 10.2 数据安全
+### 11.2 数据安全
 
 | 层面 | 方案 |
 |------|------|
 | 传输安全 | HTTPS |
 | SQL注入 | MyBatis Plus参数化查询 |
-| XSS | 前端输入过滤 + 后端输出转义 |
+| XSS | FTL输出自动转义 + 前端输入过滤 |
 | CSRF | Spring Security CSRF Token |
 | 敏感数据 | 暂无加密存储要求 |
 | PMS只读 | PMS数据源仅配置SELECT权限账号 |
 
-### 10.3 审计日志
+### 11.3 审计日志
 
 通过AOP切面自动记录关键操作：
 
@@ -1438,9 +1682,9 @@ public @interface AuditLog {
 
 ---
 
-## 11. 部署架构
+## 12. 部署架构
 
-### 11.1 部署拓扑
+### 12.1 部署拓扑
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -1455,24 +1699,24 @@ public @interface AuditLog {
 │              Port: 8080                          │
 └────────┬──────────────┬──────────────┬──────────┘
          │              │              │
-┌────────▼──────┐ ┌─────▼──────┐ ┌────▼──────────┐
-│  FMEA MySQL   │ │  PMS MySQL │ │    Redis      │
-│  (读写)        │ │  (只读)     │ │  (缓存/会话)  │
-│  Port: 3306   │ │  Port: 3306│ │  Port: 6379   │
-└───────────────┘ └────────────┘ └───────────────┘
+┌────────▼────────┐ ┌───▼──────────┐ ┌─▼──────────────┐
+│ FMEA SQL Server │ │ PMS SQL Svr  │ │    Redis       │
+│    (读写)        │ │   (只读)      │ │  (缓存/会话)   │
+│  Port: 1433     │ │ Port: 1433   │ │  Port: 6379    │
+└─────────────────┘ └──────────────┘ └────────────────┘
 ```
 
-### 11.2 部署清单
+### 12.2 部署清单
 
 | 组件 | 规格 | 数量 | 说明 |
 |------|------|------|------|
 | Nginx | 2C4G | 1 | 反向代理 |
 | FMEA App | 4C8G | 1 | Spring Boot应用 |
-| FMEA MySQL | 4C8G, 100GB SSD | 1 | 主库(已有备份策略) |
-| PMS MySQL | — | 0 | 复用PMS现有数据库(只读账号) |
+| FMEA SQL Server | 4C8G, 100GB SSD | 1 | 主库(已有备份策略) |
+| PMS SQL Server | — | 0 | 复用PMS现有数据库(只读账号) |
 | Redis | 2C4G | 1 | 缓存/会话/分布式锁 |
 
-### 11.3 应用配置
+### 12.3 应用配置
 
 ```yaml
 server:
@@ -1482,6 +1726,11 @@ server:
       timeout: 30m
 
 spring:
+  freemarker:
+    template-loader-path: classpath:/templates/
+    suffix: .ftl
+    charset: UTF-8
+    cache: false
   redis:
     host: redis
     port: 6379
@@ -1508,3 +1757,4 @@ fmea:
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
 | V1.0 | 2026-05-28 | 初始版本，基于需求分析文档V2.0编写概要设计 | — |
+| V1.1 | 2026-05-28 | 数据库改为SQL Server；前端改为EasyUI+FTL模板；飞书画板改为iframe嵌入 | — |
