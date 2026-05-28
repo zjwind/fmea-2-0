@@ -2674,8 +2674,9 @@ GET /analysis/function/matrix/{taskId}
 |------|------|------|
 | functionId | Long | 功能ID |
 | description | String | 功能描述 |
-| abundanceOrder | int | 丰度排序值 |
+| abundanceOrder | Integer | 关联接口数量，用于排序 |
 | source | String | 来源（edge/ai_attachment/library） |
+| isChangeRelated | Boolean | 是否与变更点关联（对应fmea_function_item.is_change_related字段） |
 
 **MatrixMappingDTO**：
 
@@ -3715,7 +3716,11 @@ public interface FunctionItemService {
     void deleteByMatrixId(Long matrixId);
 
     void updateAbundanceOrder(Long id, int order);
+
+    void updateChangeRelated(Long id, boolean isChangeRelated);
 }
+
+// fmea_function_item表新增字段：is_change_related BIT DEFAULT 0 — 是否与变更点关联
 ```
 
 | 方法 | 调用的Mapper方法 | 说明 |
@@ -3724,6 +3729,7 @@ public interface FunctionItemService {
 | batchInsert | functionItemMapper.insert（循环） | 批量插入 |
 | deleteByMatrixId | functionItemMapper.delete | 按矩阵ID物理删除 |
 | updateAbundanceOrder | functionItemMapper.updateById | 更新丰度排序 |
+| updateChangeRelated | functionItemMapper.updateById | 更新变更关联标记 |
 
 ---
 
@@ -4896,6 +4902,7 @@ com.fmea.evaluation
 |------|------|------|
 | itemId | Long | 评估项ID |
 | dimensions | List\<DimensionGroupVO\> | 五维评估数据 |
+| dimensionOptions | List\<DimensionOptionVO\> | 维度选项列表（含维度、风险等级、选项文本、选中状态） |
 
 **DimensionGroupVO**：
 
@@ -4921,8 +4928,11 @@ com.fmea.evaluation
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | Long | 选项ID |
+| dimension | String | 维度：tech_novelty/impact_scope/severity/change_complexity/history_issue |
+| riskLevel | String | 风险等级：HIGH/MEDIUM/LOW |
 | optionText | String | 选项描述文本 |
 | isSelected | String | 选中状态：yes/no/blank |
+| sortOrder | Integer | 排序号 |
 
 ---
 
@@ -5201,7 +5211,7 @@ public interface EvaluationProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `EvaluationTaskService.withdraw()` |
-| 业务规则 | 1. 校验状态为`submitted`（否则抛`2001003`）；2. 校验当前用户为创建人；3. 状态更新为`draft`，`isWithdrawn=1` |
+| 业务规则 | 1. 校验状态为`submitted`（否则抛`2001003`）；2. 校验当前用户为创建人；3. 状态更新为`draft`，`isWithdrawn=1`。撤回后状态回退为DRAFT；恢复变更点清单和质量策划的编辑权限；submitCount不重置（记录累计提交次数） |
 
 ---
 
@@ -5458,7 +5468,7 @@ public interface CollaboratorService {
 | `DRAFT` | submit | `SUBMITTED` | 变更点清单已导入 | TSE |
 | `SUBMITTED` | review(approve) | `APPROVED` | — | PSE |
 | `SUBMITTED` | review(reject) | `REJECTED` | — | PSE |
-| `SUBMITTED` | withdraw | `DRAFT` | 当前用户为创建人 | TSE |
+| `SUBMITTED` | withdraw | `DRAFT` | 仅TSE可撤回；已撤回后恢复编辑权限 | TSE |
 | `REJECTED` | submit | `SUBMITTED` | 变更点清单已导入 | TSE |
 | `APPROVED` | score | `SCORED` | 所有LEVEL=0评估项五维评估全部完成 | 系统（自动） |
 | `SCORED` | confirm | `CONFIRMED` | 所有LEVEL=0评估项已完成五维评估和风险评分 | PSE/TSE |
@@ -5550,6 +5560,15 @@ public enum EvaluationStatus {
 | 场景三 | 手动点击"自动匹配" | 系统读取线上`fmea_change_list_item`表和`fmea_quality_plan`表的内容，执行匹配逻辑并更新`qualityMatch`字段 |
 
 **实现要点**：`importChangeList`和`importQualityPlan`方法末尾均检查对方数据是否已存在，若存在则自动触发匹配。
+
+**统一判断入口规则**：
+- 导入变更清单时，检查是否已有质量策划数据（fmea_quality_plan）
+  - 如有：自动触发匹配更新（调用autoMatch逻辑）
+  - 如无：仅导入变更清单数据
+- 导入质量策划时，检查是否已有变更清单数据（fmea_change_list_item）
+  - 如有：自动触发匹配更新（调用autoMatch逻辑）
+  - 如无：仅暂存质量策划数据
+- 点击自动匹配：读取线上变更清单+质量策划，执行匹配更新
 
 ---
 
@@ -5715,7 +5734,7 @@ private BigDecimal calculateDimensionScore(List<DimensionOption> options) {
 | 2002002 | 400 | 变更点清单格式不正确 | 缺少必要列、数据类型不匹配 | 按标准模板重新准备文件 |
 | 2003001 | 500 | 质量策划导入失败 | Excel读取失败、AI处理异常 | 检查文件格式，重试导入 |
 | 2004001 | 404 | 自动匹配无结果 | 变更点清单与质量策划无任何匹配项 | 检查部件名称和风险小类是否对应 |
-| 2005001 | 400 | 五维评估未完成 | 存在LEVEL=0评估项未完成五维评估 | 完成所有LEVEL=0评估项的五维评估 |
+| 2005001 | 400 | 五维评估未完成 | 存在LEVEL=0评估项未完成五维评估 | 完成所有LEVEL=0评估项的五维评估。错误响应data字段返回未完成评估的行号列表：`{"incompleteItems": [{"itemId": 101, "itemName": "电源模块", "missingDimensions": ["tech_novelty", "severity"]}, {"itemId": 105, "itemName": "信号处理", "missingDimensions": ["impact_scope"]}]}` |
 | 2005002 | 500 | 风险评分计算失败 | 五维选项数据不完整、计算异常 | 检查五维评估数据完整性 |
 | 2006001 | 400 | 协作人指派失败 | 指派协作人时权限创建失败 | 检查协作人信息和变更点是否有效 |
 | 2006002 | 409 | 合并冲突 | 系统级与部件级评估内容冲突 | 手动处理冲突后重新合并 |
@@ -6356,6 +6375,10 @@ public enum LandingStatus {
 - 用户可将措施标记为`isLanding=false`（不需要落地），标记后该措施不要求填写负责人和时间
 - 标记为`isLanding=false`的措施仍展示在基线清单中，但不生成落地跟踪项
 
+**isLanding处理规则**：
+- isLanding=false的措施：仍显示在基线清单中，标记为"不落地"，不纳入落地跟踪任务
+- isLanding=true的措施：纳入落地跟踪任务，需指定落地负责人和落地时间
+
 **提交校验**：
 
 ```
@@ -6834,7 +6857,7 @@ public interface ReviewProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `ReviewOpinionService.create()`, `ReviewerService.updateConclusion()`, `ReviewService.updateOpinionRate()` |
-| 业务规则 | 1. 校验当前用户为指定评审人；2. 创建`ReviewOpinion`记录，`isClosed=false`；3. 更新`Reviewer.conclusion`和`opinionSubmitted`；4. 重新计算意见率并更新`Review.opinionRate`；5. 检查意见率是否达到2/3，若达到则更新评审状态为`reviewing` |
+| 业务规则 | 1. 校验当前用户为指定评审人；2. 创建`ReviewOpinion`记录，`isClosed=false`；3. 更新`Reviewer.conclusion`和`opinionSubmitted`；4. 重新计算意见率并更新`Review.opinionRate`；5. 检查意见率是否达到2/3，若达到则更新评审状态为`reviewing`。意见率计算时机：所有评审人提交结论后（或评审到期自动关闭后）；计算公式：opinion_rate = 已提交结论的评审人数 / 总评审人数；写入fmea_review.opinion_rate字段 |
 
 ---
 
@@ -6884,7 +6907,7 @@ public interface ReviewProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `ReviewNotificationService.processPendingNotifications()`, `ReviewerService.listUnsubmittedByReviewId()`, `LarkService.sendMessage()`, `EmailService.sendNotify()` |
-| 业务规则 | 1. 由定时任务`ReviewNotificationJob`触发；2. 检查评审日期提前7天/1天，发送通知；3. 评审日期到期时，未提交意见的评审人自动标记为"不通过"；4. 详见7.7.8 |
+| 业务规则 | 1. 由定时任务`ReviewNotificationJob`触发；2. 检查评审日期提前7天/1天，发送通知；3. 评审日期到期时，未提交意见的评审人自动标记为"不通过"；4. 详见7.7.8。自动不通过的处理：将未评审的reviewer的conclusion设为"auto_rejected"；auto_rejected纳入意见率计算（视为"不通过"意见）；不影响其他已评审评审人的结论；通知负责人有评审人自动不通过 |
 
 ---
 
@@ -6894,7 +6917,7 @@ public interface ReviewProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `ApprovalService.create()`, `LarkService.sendMessage()`, `EmailService.sendNotify()` |
-| 业务规则 | 1. 校验评审已完成（`minutes_generated`或`completed`状态）；2. 校验变更等级与审批人层级对应（详见7.7.7）；3. 创建`Approval`记录，状态为`pending`；4. 通知审批人 |
+| 业务规则 | 1. 校验评审已完成（`minutes_generated`或`completed`状态）；2. 校验变更等级与审批人层级对应（详见7.7.7）；3. 创建`Approval`记录，状态为`pending`；4. 通知审批人。审批不通过后，负责人可再次调用initiateApproval重新发起审批，系统会创建新的审批记录 |
 
 ---
 
@@ -7018,6 +7041,7 @@ public interface ApprovalService {
     Approval getById(Long id);
     void process(Long approvalId, String conclusion, String opinion);
     Approval getByReviewId(Long reviewId);
+    void resetForReapproval(Long analysisTaskId);
 }
 ```
 
@@ -7027,6 +7051,7 @@ public interface ApprovalService {
 | getById | `ApprovalMapper.selectById()` | 根据ID查询 |
 | process | `ApprovalMapper.updateById()` | 处理审批 |
 | getByReviewId | `ApprovalMapper.selectOne()` | 按评审ID查询审批 |
+| resetForReapproval | `ApprovalMapper.updateById()` | 重置审批状态，允许再次发起审批 |
 
 ---
 
@@ -7372,7 +7397,7 @@ public void processReviewNotifications() {
             sendNotification(review, "one_day", unsubmittedUserIds);
         } else if (daysUntilReview <= 0) {
             for (Reviewer reviewer : unsubmitted) {
-                reviewerService.updateConclusion(reviewer.getId(), "rejected");
+                reviewerService.updateConclusion(reviewer.getId(), "auto_rejected");
             }
             reviewNotificationService.createNotification(
                 review.getId(), "expired", unsubmittedUserIds
@@ -7413,6 +7438,7 @@ private void sendNotification(Review review, String notifyType, List<String> use
 | 4004003 | 400 | 非审批人无权处理审批 | 非审批人尝试审批 | 确认当前用户为审批人 |
 | 4004004 | 400 | 变更等级与审批人层级不匹配 | 审批人角色与变更等级不符 | 选择对应层级的审批人 |
 | 4004005 | 400 | 评审未完成，无法发起审批 | 评审状态未达到completed | 先完成评审流程 |
+| 5003001 | 400 | 评审自动不通过 | 评审到期后评审人未提交评审结论 | 系统自动处理，通知负责人 |
 
 
 ## 8. 入库管理模块（fmea-inbound）
@@ -11432,8 +11458,12 @@ public class CasSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .addFilter(casValidationFilter())
                 .addFilter(casAuthenticationFilter())
-                .csrf().disable();
+                .csrf()
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    .and();
     }
+
+    // 前端说明：EasyUI的jQuery.ajax请求需在header中携带X-CSRF-TOKEN
 
     @Bean
     public CasAuthenticationFilter casAuthenticationFilter() throws Exception {
