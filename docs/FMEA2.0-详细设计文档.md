@@ -597,7 +597,7 @@ public class PmsQueryServiceImpl implements PmsQueryService {
 | 2004002 | 五维评估未完成 | 确认评估时存在未填写的维度 |
 | 2004003 | 评分结果不完整 | 评分计算时缺少维度分数 |
 | 2005001 | 无评估任务操作权限 | 非TSE/PSE角色操作评估任务 |
-| 2005002 | 协作人未全部签核 | 部件级评估提交时协作人未签核完成 |
+| 2005002 | 协作人指派信息不完整 | 指派协作人时缺少必要信息（用户ID或变更点） |
 | 2006001 | AI风险评估调用失败 | AiService调用超时或异常 |
 | 2006002 | AI评分建议生成失败 | AI模型返回异常 |
 | 2007001 | 变更点清单合并冲突 | 协作人导入时item_id匹配冲突 |
@@ -4485,7 +4485,7 @@ public enum EffectLevel {
 | 关联集成模块 | `PmsQueryService`（项目/1级项目判定）、`LarkService`（飞书消息通知）、`AiService`（质量策划AI处理、建议理由生成） |
 | 关联业务模块 | `ProjectService`（只读：项目信息查询）、`AnalysisService`（创建分析任务） |
 
-**核心职责**：管理DRBFM触发评估的全生命周期，包括评估任务创建、变更点清单导入、质量策划导入与自动匹配、评估提交/审核/撤回、历史问题导入、五维风险评估、风险综合评分、评估确认、协作人指派与签核、部件级评估合并。
+**核心职责**：管理DRBFM触发评估的全生命周期，包括评估任务创建、变更点清单导入、质量策划导入与自动匹配、评估提交/审核/撤回、历史问题导入、五维风险评估、风险综合评分、评估确认、协作人指派、部件级评估合并。
 
 ---
 
@@ -5027,24 +5027,29 @@ com.fmea.evaluation
 
 ---
 
-#### 5.3.18 协作人签核
+#### 5.3.18 协作人指派（上传界面）
 
 | 项目 | 说明 |
 |------|------|
-| URL | `POST /evaluation/collaborator/signoff/{taskId}` |
-| 返回 | JSON `Result<Void>` |
+| URL | `POST /evaluation/collaborator/assign` |
+| 方法 | POST |
+| 说明 | TSE在上传变更点清单或质量策划时，同时指派协作人 |
 
-**路径参数**：
+请求参数：
+```json
+{
+  "taskId": 123,
+  "collaborators": [
+    {"userId": "user001", "changeListItemIds": [1,2,3]},
+    {"userId": "user002", "changeListItemIds": [4,5,6]}
+  ]
+}
+```
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| taskId | Long | 是 | 评估任务ID |
+响应：Result<Void>
 
-**业务规则**：
-- 当前用户必须为被指派的协作人
-- 协作人负责的变更点必须已编辑完成
-- 签核后记录签核时间和签核人
-- 所有协作人签核完成后，TSE才可提交评估
+- 指派后协作人自动获得对应变更点的编辑权限
+- 单方面指派，无需协作人确认接受
 
 ---
 
@@ -5105,8 +5110,6 @@ public interface EvaluationProvider {
     void confirmEvaluation(Long taskId);
 
     void assignCollaborator(CollaboratorAssignRequest request);
-
-    void signoffCollaborator(Long taskId, String userId);
 
     void mergeEvaluation(Long taskId);
 }
@@ -5188,7 +5191,7 @@ public interface EvaluationProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `EvaluationTaskService.submit()`, `LarkService.sendMessage()`, `EmailService.sendNotify()` |
-| 业务规则 | 1. 校验评估任务存在（否则抛`2001001`）；2. 校验变更点清单已导入（否则抛`2001003`）；3. 校验状态为`draft`或`rejected`（否则抛`2001003`）；4. 部件级评估需所有协作人已签核（否则抛`2006001`）；5. 状态更新为`submitted`，`submitCount`自增1；6. 通过`LarkService`和`EmailService`通知PSE |
+| 业务规则 | 1. 校验评估任务存在（否则抛`2001001`）；2. 校验变更点清单已导入（否则抛`2001003`）；3. 校验状态为`draft`或`rejected`（否则抛`2001003`）；4. 状态更新为`submitted`，`submitCount`自增1；5. 通过`LarkService`和`EmailService`通知PSE |
 
 ---
 
@@ -5272,13 +5275,13 @@ public interface EvaluationProvider {
 
 ---
 
-#### 5.4.17 signoffCollaborator
+#### 5.4.17 assignCollaborator
 
 | 项目 | 说明 |
 |------|------|
-| 事务 | `@Transactional(rollbackFor = Exception.class)` |
-| 调用Service | `CollaboratorService.signoff()` |
-| 业务规则 | 1. 校验当前用户为被指派的协作人；2. 校验协作人负责的变更点已编辑完成；3. 记录签核时间和签核人；4. 检查是否所有协作人已签核 |
+| 方法签名 | `void assignCollaborator(CollaboratorAssignRequest request)` |
+| 调用Service | `PermissionService.batchSave()` |
+| 业务规则 | 1. 校验评估任务存在（否则抛`2001001`）；2. 校验当前用户为TSE；3. 为每个协作人创建编辑权限记录；4. 协作人仅获得指定变更点的编辑权限 |
 
 ---
 
@@ -5426,16 +5429,12 @@ public interface DimensionOptionService {
 ```java
 public interface CollaboratorService {
     void assign(Long taskId, List<CollaboratorItem> collaborators);
-    void signoff(Long taskId, String userId);
-    boolean allSignedOff(Long taskId);
 }
 ```
 
 | 方法 | 调用Mapper | 说明 |
 |------|-----------|------|
 | assign | `EvaluationTaskMapper.updateById()` | 指派协作人，更新权限 |
-| signoff | `EvaluationTaskMapper.updateById()` | 协作人签核 |
-| allSignedOff | `EvaluationTaskMapper.selectById()` | 检查是否全部签核 |
 
 ---
 
@@ -5456,7 +5455,7 @@ public interface CollaboratorService {
 
 | 当前状态 | 触发动作 | 目标状态 | 校验条件 | 执行者 |
 |----------|----------|----------|----------|--------|
-| `DRAFT` | submit | `SUBMITTED` | 变更点清单已导入；部件级需所有协作人签核 | TSE |
+| `DRAFT` | submit | `SUBMITTED` | 变更点清单已导入 | TSE |
 | `SUBMITTED` | review(approve) | `APPROVED` | — | PSE |
 | `SUBMITTED` | review(reject) | `REJECTED` | — | PSE |
 | `SUBMITTED` | withdraw | `DRAFT` | 当前用户为创建人 | TSE |
@@ -5692,24 +5691,15 @@ private BigDecimal calculateDimensionScore(List<DimensionOption> options) {
 
 ---
 
-#### 5.7.8 协作人签核流程
+#### 5.7.8 协作人指派流程
 
 ```
-1. TSE指派协作人（单方面指派，无需确认）
-   ↓
-2. 协作人获得对应变更点的编辑权限
-   ↓
-3. TSE统一上传变更点清单和质量策划
-   ↓
-4. 协作人编辑各自负责的变更点
-   ↓
-5. 协作人完成编辑后点击"签核"
-   - 系统校验：协作人负责的变更点是否已编辑完成
-   - 记录签核时间（signoffTime）和签核人（signoffUser）
-   ↓
-6. 所有协作人签核完成
-   ↓
-7. TSE可提交评估表 → PSE审核
+1. TSE在上传变更点清单或质量策划的界面，点击"指派协作人"
+2. 选择协作人，指定各协作人负责的变更点
+3. 系统为协作人创建编辑权限（permission_type='edit'）
+4. 协作人登录后可编辑被指派的变更点
+5. TSE无需等待协作人签核，可直接提交评估表
+6. 协作人编辑的变更点内容在提交时自动合并
 ```
 
 ---
@@ -5727,7 +5717,7 @@ private BigDecimal calculateDimensionScore(List<DimensionOption> options) {
 | 2004001 | 404 | 自动匹配无结果 | 变更点清单与质量策划无任何匹配项 | 检查部件名称和风险小类是否对应 |
 | 2005001 | 400 | 五维评估未完成 | 存在LEVEL=0评估项未完成五维评估 | 完成所有LEVEL=0评估项的五维评估 |
 | 2005002 | 500 | 风险评分计算失败 | 五维选项数据不完整、计算异常 | 检查五维评估数据完整性 |
-| 2006001 | 400 | 协作人未全部签核 | 提交评估时存在未签核的协作人 | 等待所有协作人完成签核 |
+| 2006001 | 400 | 协作人指派失败 | 指派协作人时权限创建失败 | 检查协作人信息和变更点是否有效 |
 | 2006002 | 409 | 合并冲突 | 系统级与部件级评估内容冲突 | 手动处理冲突后重新合并 |
 
 ---
