@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">AI模型集成</div>
+    <div style="display:flex;gap:16px;">
+        <div style="flex:1;">
+            <div class="ai-generate-panel">
+                <div class="ai-icon">🤖</div>
+                <div class="ai-title">AI辅助失效模式识别</div>
+                <div class="ai-desc">基于历史失效库和知识图谱，AI自动推荐可能的失效模式、原因和措施</div>
+                <a href="javascript:void(0)" class="easyui-linkbutton" onclick="generateFailure()">开始生成</a>
+            </div>
+            <div id="ai-failure-result" style="margin-top:16px;"></div>
+        </div>
+        <div style="flex:1;">
+            <div class="ai-generate-panel">
+                <div class="ai-icon">🧠</div>
+                <div class="ai-title">AI辅助SOD评分</div>
+                <div class="ai-desc">基于同类产品历史数据统计，AI推荐SOD评分和AP等级</div>
+                <a href="javascript:void(0)" class="easyui-linkbutton" onclick="generateSOD()">开始评分</a>
+            </div>
+            <div id="ai-sod-result" style="margin-top:16px;"></div>
+        </div>
+    </div>
+    <div class="form-section" style="margin-top:16px;">
+        <div class="section-title">AI推荐措施</div>
+        <div id="ai-measure-result"></div>
+    </div>
+</div>
+<script>
+function generateFailure() {
+    var data = MockData.get('aiGenerateData').failure_suggestions;
+    var html = '<div class="form-section"><div class="section-title">AI推荐失效模式</div>';
+    html += '<table class="five-dim-table"><tr><th>结构</th><th>功能</th><th>失效类型</th><th>置信度</th><th>推荐理由</th><th>操作</th></tr>';
+    for (var i = 0; i < data.length; i++) {
+        var d = data[i];
+        html += '<tr><td>' + d.structure + '</td><td>' + d.function + '</td><td>' + d.mode + '</td>';
+        html += '<td style="font-weight:700;color:' + (d.confidence > 0.9 ? '#c62828' : '#f57f17') + ';">' + (d.confidence * 100).toFixed(0) + '%</td>';
+        html += '<td style="text-align:left;">' + d.reason + '</td>';
+        html += '<td><a href="javascript:void(0)" class="easyui-linkbutton" onclick="parent.Common.showInfo(\'采纳推荐（原型演示）\')">采纳</a></td></tr>';
+    }
+    html += '</table></div>';
+    $('#ai-failure-result').html(html);
+
+    var measures = MockData.get('aiGenerateData').measure_suggestions;
+    var mHtml = '<table class="five-dim-table"><tr><th>类型</th><th>措施描述</th><th>置信度</th><th>来源</th><th>操作</th></tr>';
+    for (var j = 0; j < measures.length; j++) {
+        var m = measures[j];
+        mHtml += '<tr><td>' + (m.type === 'preventive' ? '预防' : '探测') + '</td>';
+        mHtml += '<td style="text-align:left;">' + m.desc + '</td>';
+        mHtml += '<td style="font-weight:700;">' + (m.confidence * 100).toFixed(0) + '%</td>';
+        mHtml += '<td>' + m.source + '</td>';
+        mHtml += '<td><a href="javascript:void(0)" class="easyui-linkbutton" onclick="parent.Common.showInfo(\'采纳推荐（原型演示）\')">采纳</a></td></tr>';
+    }
+    mHtml += '</table>';
+    $('#ai-measure-result').html(mHtml);
+}
+function generateSOD() {
+    var data = MockData.get('aiGenerateData').sod_suggestions;
+    var html = '<div class="form-section"><div class="section-title">AI推荐SOD评分</div>';
+    html += '<table class="five-dim-table"><tr><th>失效ID</th><th>S</th><th>O</th><th>D</th><th>置信度</th><th>推荐理由</th><th>操作</th></tr>';
+    for (var i = 0; i < data.length; i++) {
+        var d = data[i];
+        html += '<tr><td>' + d.failure_id + '</td><td>' + d.s + '</td><td>' + d.o + '</td><td>' + d.d + '</td>';
+        html += '<td style="font-weight:700;">' + (d.confidence * 100).toFixed(0) + '%</td>';
+        html += '<td style="text-align:left;">' + d.reason + '</td>';
+        html += '<td><a href="javascript:void(0)" class="easyui-linkbutton" onclick="parent.Common.showInfo(\'采纳评分（原型演示）\')">采纳</a></td></tr>';
+    }
+    html += '</table></div>';
+    $('#ai-sod-result').html(html);
+}
+</script>
+</body>
+</html>

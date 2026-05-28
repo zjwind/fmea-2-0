@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+    <style>
+        .stat-cards {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            flex: 1;
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: box-shadow .2s;
+            cursor: default;
+        }
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        .stat-card .st-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .stat-card .st-icon.blue { background: #e8f0fe; color: #1a73e8; }
+        .stat-card .st-icon.green { background: #e6f4ea; color: #34a853; }
+        .stat-card .st-icon.orange { background: #fef7e0; color: #fbbc04; }
+        .stat-card .st-icon.red { background: #fce8e6; color: #ea4335; }
+        .stat-card .st-icon.gray { background: #f1f3f5; color: #5f6368; }
+        .stat-card .st-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--gray-900);
+            line-height: 1;
+        }
+        .stat-card .st-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+        }
+        .filter-bar .filter-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .detail-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--gray-200);
+            margin-bottom: 16px;
+        }
+        .detail-tabs .dtab {
+            padding: 8px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-600);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all .2s;
+        }
+        .detail-tabs .dtab:hover {
+            color: var(--primary);
+        }
+        .detail-tabs .dtab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        .detail-tab-content {
+            display: none;
+        }
+        .detail-tab-content.active {
+            display: block;
+        }
+        .audit-checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .audit-checklist li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 13px;
+        }
+        .audit-checklist li:last-child {
+            border-bottom: none;
+        }
+        .audit-checklist .audit-label {
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+        .audit-checklist .audit-radios {
+            display: flex;
+            gap: 16px;
+        }
+        .audit-checklist .audit-radios label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--gray-700);
+        }
+        .landing-form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .landing-form-row .lf-label {
+            width: 100px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-600);
+            flex-shrink: 0;
+        }
+        .landing-form-row .lf-field {
+            flex: 1;
+        }
+        .file-upload-sim {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border: 1px dashed var(--gray-400);
+            border-radius: var(--radius);
+            font-size: 12px;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all .2s;
+            background: var(--gray-50);
+        }
+        .file-upload-sim:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        .file-upload-sim .uploaded-name {
+            color: var(--primary);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">基线落地跟踪 - CloudEngine S12700E</div>
+
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="st-icon blue">📋</div>
+            <div><div class="st-value" id="st-plan">3</div><div class="st-label">计划落地数</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="st-icon green">✅</div>
+            <div><div class="st-value" id="st-done">2</div><div class="st-label">已落地</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="st-icon orange">⏳</div>
+            <div><div class="st-value" id="st-partial">1</div><div class="st-label">部分落地</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="st-icon gray">⬜</div>
+            <div><div class="st-value" id="st-pending">0</div><div class="st-label">未落地</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="st-icon red">⚠️</div>
+            <div><div class="st-value" id="st-overdue">0</div><div class="st-label">逾期数</div></div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <span class="filter-label">状态筛选：</span>
+        <select id="filter-status" class="easyui-combobox" style="width:130px;" data-options="panelHeight:'auto',editable:false,value:'全部',onChange:filterChanged">
+            <option value="全部">全部</option>
+            <option value="completed">已完成</option>
+            <option value="in-progress">进行中</option>
+            <option value="pending">未开始</option>
+        </select>
+        <span class="filter-label" style="margin-left:12px;">负责人筛选：</span>
+        <input id="filter-assignee" class="easyui-textbox" style="width:120px;" data-options="prompt:'输入姓名',onChange:filterChanged">
+        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="resetFilter()" style="margin-left:8px;">重置</a>
+    </div>
+
+    <table id="dg" class="easyui-datagrid" style="width:100%;height:200px;"
+           data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true,onSelect:onSelect">
+        <thead>
+        <tr>
+            <th data-options="field:'id',width:80">任务编号</th>
+            <th data-options="field:'name',width:220">任务名称</th>
+            <th data-options="field:'assignee',width:70,align:'center'">负责人</th>
+            <th data-options="field:'due_date',width:90,align:'center'">截止日期</th>
+            <th data-options="field:'status',width:80,align:'center',formatter:parent.Common.statusFormatter">状态</th>
+            <th data-options="field:'progress',width:100,align:'center',formatter:progressFormatter">进度</th>
+            <th data-options="field:'_op',width:80,align:'center',formatter:opFormatter">操作</th>
+        </tr>
+        </thead>
+    </table>
+
+    <div id="detail-panel" style="margin-top:16px;display:none;">
+        <div class="form-section">
+            <div class="section-title">落地任务详情</div>
+            <div id="task-detail"></div>
+
+            <div class="detail-tabs" style="margin-top:16px;">
+                <div class="dtab active" onclick="switchDetailTab(this,'tab-landing')">落地填报</div>
+                <div class="dtab" onclick="switchDetailTab(this,'tab-review')">主管审核</div>
+                <div class="dtab" onclick="switchDetailTab(this,'tab-audit')">落地审计</div>
+            </div>
+
+            <div id="tab-landing" class="detail-tab-content active">
+                <div id="landing-form"></div>
+                <div style="text-align:right;margin-top:12px;">
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="submitLanding()">提交填报</a>
+                </div>
+            </div>
+
+            <div id="tab-review" class="detail-tab-content">
+                <div style="margin-bottom:14px;">
+                    <div style="margin-bottom:6px;font-size:12px;font-weight:500;color:var(--gray-600);">审核意见</div>
+                    <input id="review-comment" class="easyui-textbox" style="width:100%;height:80px;" data-options="multiline:true,prompt:'请输入审核意见'">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <div style="margin-bottom:6px;font-size:12px;font-weight:500;color:var(--gray-600);">审核结果</div>
+                    <div style="display:flex;gap:20px;padding:4px 0;">
+                        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
+                            <input type="radio" name="review-result" value="pass" checked> 通过
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
+                            <input type="radio" name="review-result" value="fail"> 不通过
+                        </label>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="submitReview()">提交审核</a>
+                </div>
+            </div>
+
+            <div id="tab-audit" class="detail-tab-content">
+                <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;">请逐项确认落地审计检查项：</div>
+                <ul class="audit-checklist">
+                    <li>
+                        <span class="audit-label">1. 设计文档是否归档</span>
+                        <div class="audit-radios">
+                            <label><input type="radio" name="audit-1" value="pass"> 通过</label>
+                            <label><input type="radio" name="audit-1" value="fail"> 不通过</label>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="audit-label">2. 测试报告是否完成</span>
+                        <div class="audit-radios">
+                            <label><input type="radio" name="audit-2" value="pass"> 通过</label>
+                            <label><input type="radio" name="audit-2" value="fail"> 不通过</label>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="audit-label">3. 措施是否有效</span>
+                        <div class="audit-radios">
+                            <label><input type="radio" name="audit-3" value="pass"> 通过</label>
+                            <label><input type="radio" name="audit-3" value="fail"> 不通过</label>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="audit-label">4. 基线是否更新</span>
+                        <div class="audit-radios">
+                            <label><input type="radio" name="audit-4" value="pass"> 通过</label>
+                            <label><input type="radio" name="audit-4" value="fail"> 不通过</label>
+                        </div>
+                    </li>
+                </ul>
+                <div style="text-align:right;margin-top:12px;">
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="submitAudit()">提交审计</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="dlg-landing" class="easyui-dialog" title="落地填报" style="width:600px;padding:20px;" data-options="closed:true,modal:true,buttons:'#dlg-landing-btns'">
+    <div id="dlg-landing-content"></div>
+</div>
+<div id="dlg-landing-btns">
+    <a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#dlg-landing').dialog('close')">取消</a>
+    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="submitLandingDialog()">提交</a>
+</div>
+
+<script>
+var currentRow = null;
+var allTasks = [];
+
+function progressFormatter(value) {
+    var color = value >= 100 ? '#34a853' : (value > 0 ? '#1a73e8' : '#dee2e6');
+    return '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<div style="flex:1;background:#e9ecef;border-radius:3px;height:6px;overflow:hidden;">' +
+        '<div style="background:' + color + ';height:100%;width:' + value + '%;border-radius:3px;"></div></div>' +
+        '<span style="font-size:11px;">' + value + '%</span></div>';
+}
+
+function opFormatter(value, row) {
+    return '<a href="javascript:void(0)" style="color:var(--primary);font-size:12px;" onclick="openLandingDialog(\'' + row.id + '\')">落地填报</a>';
+}
+
+function updateStats() {
+    var tasks = MockData.get('landingTasks');
+    var done = 0, partial = 0, pending = 0, overdue = 0;
+    var today = new Date();
+    for (var i = 0; i < tasks.length; i++) {
+        var t = tasks[i];
+        if (t.status === 'completed') done++;
+        else if (t.status === 'in-progress') partial++;
+        else pending++;
+        var dd = new Date(t.due_date);
+        if (dd < today && t.status !== 'completed') overdue++;
+    }
+    $('#st-plan').text(tasks.length);
+    $('#st-done').text(done);
+    $('#st-partial').text(partial);
+    $('#st-pending').text(pending);
+    $('#st-overdue').text(overdue);
+}
+
+function onSelect(index, row) {
+    currentRow = row;
+    $('#detail-panel').show();
+
+    var html = '<div class="form-row">';
+    html += '<div class="form-group"><label>任务编号</label><div class="form-value">' + row.id + '</div></div>';
+    html += '<div class="form-group"><label>任务名称</label><div class="form-value">' + row.name + '</div></div>';
+    html += '<div class="form-group"><label>负责人</label><div class="form-value">' + row.assignee + '</div></div>';
+    html += '<div class="form-group"><label>截止日期</label><div class="form-value">' + row.due_date + '</div></div>';
+    html += '</div>';
+    html += '<div style="margin-top:8px;"><b>落地项：</b></div>';
+    html += '<table class="five-dim-table" style="margin-top:8px;"><tr><th>序号</th><th>落地项</th><th>状态</th></tr>';
+    for (var i = 0; i < row.items.length; i++) {
+        var item = row.items[i];
+        html += '<tr><td>' + (i + 1) + '</td><td style="text-align:left;">' + item.name + '</td><td>' + parent.Common.statusFormatter(item.status) + '</td></tr>';
+    }
+    html += '</table>';
+    $('#task-detail').html(html);
+
+    buildLandingForm(row);
+    resetDetailTabs();
+}
+
+function buildLandingForm(row) {
+    var html = '';
+    for (var i = 0; i < row.items.length; i++) {
+        var item = row.items[i];
+        html += '<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px 16px;margin-bottom:10px;">';
+        html += '<div style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:10px;">落地项 ' + (i + 1) + '：' + item.name + '</div>';
+        html += '<div class="landing-form-row">';
+        html += '<span class="lf-label">完成状态</span>';
+        html += '<div class="lf-field"><select class="easyui-combobox landing-status" data-options="panelHeight:\'auto\',editable:false,value:\'' + item.status + '\'" style="width:140px;">';
+        html += '<option value="completed"' + (item.status === 'completed' ? ' selected' : '') + '>已完成</option>';
+        html += '<option value="in-progress"' + (item.status === 'in-progress' ? ' selected' : '') + '>进行中</option>';
+        html += '<option value="pending"' + (item.status === 'pending' ? ' selected' : '') + '>未开始</option>';
+        html += '</select></div>';
+        html += '</div>';
+        html += '<div class="landing-form-row">';
+        html += '<span class="lf-label">完成说明</span>';
+        html += '<div class="lf-field"><input class="easyui-textbox landing-desc" style="width:100%;" data-options="multiline:true,height:50,prompt:\'请输入完成说明\'"></div>';
+        html += '</div>';
+        html += '<div class="landing-form-row">';
+        html += '<span class="lf-label">附件上传</span>';
+        html += '<div class="lf-field"><div class="file-upload-sim" onclick="simulateUpload(this)">📎 点击上传附件</div></div>';
+        html += '</div>';
+        html += '</div>';
+    }
+    $('#landing-form').html(html);
+    $.parser.parse($('#landing-form'));
+}
+
+function resetDetailTabs() {
+    $('.detail-tabs .dtab').removeClass('active');
+    $('.detail-tabs .dtab:first').addClass('active');
+    $('.detail-tab-content').removeClass('active');
+    $('#tab-landing').addClass('active');
+}
+
+function switchDetailTab(el, tabId) {
+    $('.detail-tabs .dtab').removeClass('active');
+    $(el).addClass('active');
+    $('.detail-tab-content').removeClass('active');
+    $('#' + tabId).addClass('active');
+}
+
+function openLandingDialog(taskId) {
+    var tasks = MockData.get('landingTasks');
+    var row = null;
+    for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].id === taskId) { row = tasks[i]; break; }
+    }
+    if (!row) return;
+
+    var html = '';
+    for (var j = 0; j < row.items.length; j++) {
+        var item = row.items[j];
+        html += '<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px 16px;margin-bottom:10px;">';
+        html += '<div style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:10px;">落地项 ' + (j + 1) + '：' + item.name + '</div>';
+        html += '<div style="margin-bottom:8px;">';
+        html += '<div style="margin-bottom:4px;font-size:12px;color:var(--gray-600);">完成状态</div>';
+        html += '<select class="easyui-combobox dlg-landing-status" data-options="panelHeight:\'auto\',editable:false,value:\'' + item.status + '\'" style="width:140px;">';
+        html += '<option value="completed"' + (item.status === 'completed' ? ' selected' : '') + '>已完成</option>';
+        html += '<option value="in-progress"' + (item.status === 'in-progress' ? ' selected' : '') + '>进行中</option>';
+        html += '<option value="pending"' + (item.status === 'pending' ? ' selected' : '') + '>未开始</option>';
+        html += '</select>';
+        html += '</div>';
+        html += '<div style="margin-bottom:8px;">';
+        html += '<div style="margin-bottom:4px;font-size:12px;color:var(--gray-600);">完成说明</div>';
+        html += '<input class="easyui-textbox dlg-landing-desc" style="width:100%;height:50px;" data-options="multiline:true,prompt:\'请输入完成说明\'">';
+        html += '</div>';
+        html += '<div>';
+        html += '<div style="margin-bottom:4px;font-size:12px;color:var(--gray-600);">附件上传</div>';
+        html += '<div class="file-upload-sim" onclick="simulateUpload(this)">📎 点击上传附件</div>';
+        html += '</div>';
+        html += '</div>';
+    }
+    $('#dlg-landing-content').html(html);
+    $.parser.parse($('#dlg-landing-content'));
+    $('#dlg-landing').dialog('open');
+}
+
+function simulateUpload(el) {
+    var names = ['验证报告.pdf', '测试数据.xlsx', '设计文档.docx', '归档记录.pdf'];
+    var name = names[Math.floor(Math.random() * names.length)];
+    $(el).html('📎 <span class="uploaded-name">' + name + '</span> <span style="color:var(--success);font-size:11px;">✓ 已上传</span>');
+}
+
+function submitLanding() {
+    parent.Common.showNotification('填报成功', '落地填报信息已保存', 'success');
+}
+
+function submitLandingDialog() {
+    $('#dlg-landing').dialog('close');
+    parent.Common.showNotification('填报成功', '落地填报信息已提交', 'success');
+}
+
+function submitReview() {
+    var comment = $('#review-comment').textbox('getValue');
+    var result = $('input[name="review-result"]:checked').val();
+    if (!comment) {
+        parent.Common.showError('请填写审核意见');
+        return;
+    }
+    var resultText = result === 'pass' ? '通过' : '不通过';
+    parent.Common.showNotification('审核已提交', '审核结果：' + resultText, result === 'pass' ? 'success' : 'warning');
+}
+
+function submitAudit() {
+    var allChecked = true;
+    for (var i = 1; i <= 4; i++) {
+        var val = $('input[name="audit-' + i + '"]:checked').val();
+        if (!val) { allChecked = false; break; }
+    }
+    if (!allChecked) {
+        parent.Common.showError('请完成所有审计检查项');
+        return;
+    }
+    var allPass = true;
+    for (var j = 1; j <= 4; j++) {
+        if ($('input[name="audit-' + j + '"]:checked').val() !== 'pass') {
+            allPass = false;
+            break;
+        }
+    }
+    if (allPass) {
+        parent.Common.showNotification('审计通过', '所有审计检查项均已通过', 'success');
+    } else {
+        parent.Common.showNotification('审计未通过', '存在未通过的审计检查项，请整改后重新审计', 'warning');
+    }
+}
+
+function filterChanged() {
+    var statusVal = $('#filter-status').combobox('getValue');
+    var assigneeVal = $('#filter-assignee').textbox('getValue').trim();
+    var filtered = [];
+    for (var i = 0; i < allTasks.length; i++) {
+        var t = allTasks[i];
+        var statusMatch = (statusVal === '全部') || (t.status === statusVal);
+        var assigneeMatch = !assigneeVal || t.assignee.indexOf(assigneeVal) >= 0;
+        if (statusMatch && assigneeMatch) {
+            filtered.push(t);
+        }
+    }
+    $('#dg').datagrid('loadData', filtered);
+}
+
+function resetFilter() {
+    $('#filter-status').combobox('setValue', '全部');
+    $('#filter-assignee').textbox('setValue', '');
+    $('#dg').datagrid('loadData', allTasks);
+}
+
+$(function () {
+    allTasks = MockData.get('landingTasks');
+    $('#dg').datagrid('loadData', allTasks);
+    if (allTasks.length > 0) $('#dg').datagrid('selectRow', 0);
+    updateStats();
+});
+</script>
+</body>
+</html>

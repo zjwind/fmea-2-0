@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FMEA 2.0 / DRBFM全生命周期管理平台</title>
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <script src="js/mock-data.js"></script>
+    <script src="js/common.js"></script>
+</head>
+<body class="easyui-layout" data-options="fit:true">
+
+    <div data-options="region:'north',border:false,noheader:true" style="height:56px;overflow:hidden;">
+        <div class="header-bar">
+            <div class="logo-area">
+                <div class="logo-icon">F</div>
+                <div>
+                    <div class="system-title">FMEA 2.0 / DRBFM全生命周期管理平台</div>
+                    <div class="system-subtitle">Design Review Based on Failure Mode</div>
+                </div>
+            </div>
+            <div class="user-area">
+                <div class="user-info">
+                    <div class="user-avatar">张</div>
+                    <span>张三 | TSE</span>
+                </div>
+                <button class="btn-logout" onclick="Common.showConfirm('确定要退出系统吗？', function(){ window.location.reload(); })">退出</button>
+            </div>
+        </div>
+    </div>
+
+    <div data-options="region:'west',title:'功能菜单',split:true,collapsible:true" style="width:240px;">
+        <ul id="menu-tree" class="easyui-tree"
+            data-options="animate:true,lines:true,onClick:function(node){onMenuClick(node)}">
+        </ul>
+    </div>
+
+    <div data-options="region:'center',border:false">
+        <div id="main-tabs" class="easyui-tabs" data-options="fit:true,border:false,tabWidth:140">
+            <div title="看板首页" data-options="closable:false" style="overflow:auto;padding:0;">
+                <iframe scrolling="auto" frameborder="0" src="pages/dashboard.html" style="width:100%;height:100%;border:none;"></iframe>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+<script>
+var menuData = [
+    {
+        text: '看板首页',
+        attributes: { url: 'pages/dashboard.html', id: 'dashboard' }
+    },
+    {
+        text: '项目管理',
+        state: 'closed',
+        children: [
+            { text: '项目列表', attributes: { url: 'pages/project-list.html', id: 'project-list' } },
+            { text: '项目详情', attributes: { url: 'pages/project-detail.html', id: 'project-detail' } }
+        ]
+    },
+    {
+        text: 'DRBFM触发评估',
+        state: 'closed',
+        children: [
+            { text: '系统级评估', attributes: { url: 'pages/evaluation-system.html', id: 'evaluation-system' } },
+            { text: '部件级评估', attributes: { url: 'pages/evaluation-part.html', id: 'evaluation-part' } }
+        ]
+    },
+    {
+        text: 'DRBFM分析',
+        state: 'closed',
+        children: [
+            { text: '分析任务概览', attributes: { url: 'pages/analysis-overview.html', id: 'analysis-overview' } },
+            { text: '结构分析', attributes: { url: 'pages/analysis-structure.html', id: 'analysis-structure' } },
+            { text: '功能分析', attributes: { url: 'pages/analysis-function.html', id: 'analysis-function' } },
+            { text: '失效分析', attributes: { url: 'pages/analysis-failure.html', id: 'analysis-failure' } },
+            { text: 'SOD评分', attributes: { url: 'pages/analysis-sod.html', id: 'analysis-sod' } }
+        ]
+    },
+    {
+        text: '基线输出与落地跟踪',
+        state: 'closed',
+        children: [
+            { text: '基线输出', attributes: { url: 'pages/baseline-output.html', id: 'baseline-output' } },
+            { text: '基线落地跟踪', attributes: { url: 'pages/baseline-tracking.html', id: 'baseline-tracking' } }
+        ]
+    },
+    {
+        text: '评审与审批',
+        state: 'closed',
+        children: [
+            { text: '评审', attributes: { url: 'pages/review.html', id: 'review' } },
+            { text: '审批', attributes: { url: 'pages/approval.html', id: 'approval' } }
+        ]
+    },
+    {
+        text: '入库管理',
+        attributes: { url: 'pages/inbound.html', id: 'inbound' }
+    },
+    {
+        text: 'DRBFM迭代更新',
+        attributes: { url: 'pages/iteration.html', id: 'iteration' }
+    },
+    {
+        text: 'AI模型集成',
+        attributes: { url: 'pages/ai-models.html', id: 'ai-models' }
+    },
+    {
+        text: '基线库与知识图谱',
+        state: 'closed',
+        children: [
+            { text: '基线库管理', attributes: { url: 'pages/baseline-library.html', id: 'baseline-library' } },
+            { text: '失效库', attributes: { url: 'pages/failure-library.html', id: 'failure-library' } },
+            { text: '措施库', attributes: { url: 'pages/measure-library.html', id: 'measure-library' } },
+            { text: '功能库', attributes: { url: 'pages/function-library.html', id: 'function-library' } }
+        ]
+    },
+    {
+        text: '看板与统计',
+        state: 'closed',
+        children: [
+            { text: '统计与推送', attributes: { url: 'pages/statistics.html', id: 'statistics' } }
+        ]
+    },
+    {
+        text: '系统配置',
+        state: 'closed',
+        children: [
+            { text: '评审角色设置', attributes: { url: 'pages/config-review.html', id: 'config-review' } },
+            { text: '审批角色设置', attributes: { url: 'pages/config-approval.html', id: 'config-approval' } },
+            { text: 'SOD评价标准', attributes: { url: 'pages/config-sod.html', id: 'config-sod' } },
+            { text: 'AP参考表', attributes: { url: 'pages/config-ap.html', id: 'config-ap' } },
+            { text: '领域配置', attributes: { url: 'pages/config-domain.html', id: 'config-domain' } },
+            { text: '导出设置', attributes: { url: 'pages/config-export.html', id: 'config-export' } },
+            { text: '基线库管理员', attributes: { url: 'pages/config-baseline-admin.html', id: 'config-baseline-admin' } },
+            { text: '权限配置', attributes: { url: 'pages/config-permission.html', id: 'config-permission' } }
+        ]
+    }
+];
+
+function onMenuClick(node) {
+    if (!node.attributes || !node.attributes.url) return;
+    Common.addTab(node.text, node.attributes.url);
+}
+
+$(function () {
+    $('#menu-tree').tree('loadData', menuData);
+});
+</script>
+
+</html>
+</body>

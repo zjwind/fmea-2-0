@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+    <style>
+        .review-info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px 24px;
+        }
+        .review-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .review-info-item .info-label {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-bottom: 2px;
+        }
+        .review-info-item .info-value {
+            font-size: 13px;
+            color: var(--gray-800);
+            font-weight: 500;
+        }
+        .opinion-form {
+            padding: 12px 0;
+        }
+        .opinion-form .radio-group {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 12px;
+        }
+        .opinion-form .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--gray-700);
+            cursor: pointer;
+        }
+        .opinion-form .radio-group input[type="radio"] {
+            accent-color: var(--primary);
+        }
+        .opinion-form textarea {
+            width: 100%;
+            min-height: 80px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            padding: 8px 12px;
+            font-size: 12px;
+            font-family: var(--font-family);
+            resize: vertical;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .opinion-form textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(26,115,232,.15);
+        }
+        .conclusion-section {
+            background: #f0f7ff;
+            border: 1px solid #b3d4fc;
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        .conclusion-section .conclusion-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+        .conclusion-section .conclusion-header::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+        .closure-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .closure-item:last-child {
+            border-bottom: none;
+        }
+        .closure-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .closure-icon.resolved {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .closure-icon.open {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+        .closure-content {
+            flex: 1;
+        }
+        .closure-content .closure-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        .closure-content .closure-desc {
+            font-size: 11px;
+            color: var(--gray-600);
+            margin-top: 2px;
+        }
+        .closure-content .closure-resolution {
+            font-size: 11px;
+            color: var(--primary);
+            margin-top: 4px;
+            padding: 4px 8px;
+            background: var(--primary-light);
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .reviewer-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .reviewer-row .remove-reviewer {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--gray-300);
+            background: #fff;
+            color: var(--danger);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            transition: all .2s;
+        }
+        .reviewer-row .remove-reviewer:hover {
+            background: #ffebee;
+            border-color: var(--danger);
+        }
+        .detail-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--gray-200);
+        }
+        .status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .status-tag.completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-tag.in-progress {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .status-tag.pending {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">评审管理</div>
+    <div class="toolbar">
+        <span class="toolbar-title">评审列表</span>
+        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="openNewReviewDialog()">发起评审</a>
+    </div>
+    <table id="dg" class="easyui-datagrid" style="width:100%;height:240px;"
+           data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true,pagination:true,pageSize:10,pageList:[10,20,50],onSelect:onSelect">
+        <thead>
+        <tr>
+            <th data-options="field:'id',width:80">评审编号</th>
+            <th data-options="field:'project_id',width:90">项目编号</th>
+            <th data-options="field:'type',width:140">评审类型</th>
+            <th data-options="field:'status',width:80,align:'center',formatter:parent.Common.statusFormatter">状态</th>
+            <th data-options="field:'result',width:120">评审结论</th>
+            <th data-options="field:'created_at',width:90,align:'center'">评审日期</th>
+        </tr>
+        </thead>
+    </table>
+
+    <div id="detail-panel" style="margin-top:16px;display:none;">
+        <div class="form-section">
+            <div class="section-title">评审信息</div>
+            <div id="review-info" class="review-info-grid"></div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-title">评审意见</div>
+            <div id="review-thread"></div>
+        </div>
+
+        <div id="opinion-section" class="form-section">
+            <div class="section-title">填写评审意见</div>
+            <div class="opinion-form">
+                <div class="radio-group">
+                    <label><input type="radio" name="opinion" value="agree"> 同意</label>
+                    <label><input type="radio" name="opinion" value="disagree"> 不同意</label>
+                    <label><input type="radio" name="opinion" value="conditional"> 有条件同意</label>
+                </div>
+                <textarea id="opinion-comment" placeholder="请输入评审意见..."></textarea>
+                <div style="margin-top:10px;text-align:right;">
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="submitOpinion()">提交意见</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="conclusion-section" class="form-section" style="display:none;">
+            <div class="conclusion-section">
+                <div class="conclusion-header">评审结论</div>
+                <div class="form-row" style="margin-bottom:12px;">
+                    <div class="form-group">
+                        <label>结论</label>
+                        <select id="conclusion-select" class="easyui-combobox" style="width:100%;"
+                                data-options="panelHeight:'auto',editable:false">
+                            <option value="通过">通过</option>
+                            <option value="通过（有条件）">通过（有条件）</option>
+                            <option value="不通过">不通过</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>结论摘要</label>
+                    <textarea id="conclusion-summary" placeholder="请输入评审结论摘要..." style="width:100%;min-height:60px;border:1px solid var(--gray-300);border-radius:var(--radius);padding:8px 12px;font-size:12px;font-family:var(--font-family);resize:vertical;outline:none;"></textarea>
+                </div>
+                <div style="margin-top:10px;text-align:right;">
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="confirmConclusion()">确认结论</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="closure-section" class="form-section" style="display:none;">
+            <div class="section-title">意见闭环</div>
+            <div id="closure-list"></div>
+        </div>
+    </div>
+</div>
+
+<div id="new-review-dlg" style="display:none;">
+    <div style="padding:20px;">
+        <div class="form-row">
+            <div class="form-group">
+                <label>评审类型</label>
+                <select id="review-type" class="easyui-combobox" style="width:100%;"
+                        data-options="panelHeight:'auto',editable:false,required:true">
+                    <option value="">请选择评审类型</option>
+                    <option value="结构分析评审">结构分析评审</option>
+                    <option value="功能分析评审">功能分析评审</option>
+                    <option value="失效分析评审">失效分析评审</option>
+                    <option value="SOD评分评审">SOD评分评审</option>
+                    <option value="基线输出评审">基线输出评审</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:12px;color:var(--gray-600);font-weight:500;display:block;margin-bottom:6px;">评审人员</label>
+            <div id="reviewer-list">
+                <div class="reviewer-row">
+                    <input class="easyui-combobox reviewer-name" style="width:140px;"
+                           data-options="valueField:'name',textField:'name',panelHeight:'auto',editable:false,data:[{name:'陈工'},{name:'刘工'},{name:'黄工'},{name:'张工'},{name:'李工'}],prompt:'选择评审人'">
+                    <select class="easyui-combobox reviewer-role" style="width:140px;"
+                            data-options="panelHeight:'auto',editable:false,data:[{value:'评审组长',text:'评审组长'},{value:'设计评审专家',text:'设计评审专家'},{value:'可靠性评审专家',text:'可靠性评审专家'},{value:'工艺评审专家',text:'工艺评审专家'},{value:'测试评审专家',text:'测试评审专家'}],prompt:'选择角色'">
+                    </select>
+                    <button class="remove-reviewer" onclick="removeReviewer(this)" title="移除">×</button>
+                </div>
+            </div>
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="addReviewerRow()" style="margin-top:6px;">添加评审人</a>
+        </div>
+        <div class="form-group">
+            <label>评审范围说明</label>
+            <textarea id="review-scope" placeholder="请描述评审范围和重点关注内容..." style="width:100%;min-height:80px;border:1px solid var(--gray-300);border-radius:var(--radius);padding:8px 12px;font-size:12px;font-family:var(--font-family);resize:vertical;outline:none;"></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentReview = null;
+
+function onSelect(index, row) {
+    currentReview = row;
+    $('#detail-panel').show();
+
+    var statusMap = { 'completed': '已完成', 'in-progress': '进行中', 'pending': '待处理', 'draft': '草稿' };
+    var statusCls = row.status === 'completed' ? 'completed' : (row.status === 'in-progress' ? 'in-progress' : 'pending');
+
+    $('#review-info').html(
+        '<div class="review-info-item"><span class="info-label">评审编号</span><span class="info-value">' + row.id + '</span></div>' +
+        '<div class="review-info-item"><span class="info-label">评审类型</span><span class="info-value">' + row.type + '</span></div>' +
+        '<div class="review-info-item"><span class="info-label">评审状态</span><span class="info-value"><span class="status-tag ' + statusCls + '">' + (statusMap[row.status] || row.status) + '</span></span></div>' +
+        '<div class="review-info-item"><span class="info-label">评审结论</span><span class="info-value">' + (row.result || '—') + '</span></div>' +
+        '<div class="review-info-item"><span class="info-label">项目编号</span><span class="info-value">' + row.project_id + '</span></div>' +
+        '<div class="review-info-item"><span class="info-label">发起时间</span><span class="info-value">' + row.created_at + '</span></div>' +
+        '<div class="review-info-item"><span class="info-label">评审人数</span><span class="info-value">' + row.reviewers.length + '人</span></div>' +
+        '<div class="review-info-item"><span class="info-label">已提交意见</span><span class="info-value">' + row.reviewers.filter(function(r){return r.opinion!=='pending';}).length + '/' + row.reviewers.length + '</span></div>'
+    );
+
+    $('#review-thread').html(parent.Common.buildReviewThread(row.reviewers));
+
+    var allSubmitted = row.reviewers.every(function(r) { return r.opinion !== 'pending'; });
+    if (allSubmitted && row.status !== 'completed') {
+        $('#conclusion-section').show();
+    } else {
+        $('#conclusion-section').hide();
+    }
+
+    if (row.status === 'completed') {
+        $('#opinion-section').hide();
+        $('#closure-section').show();
+        buildClosureList(row);
+    } else {
+        $('#opinion-section').show();
+        $('#closure-section').hide();
+    }
+}
+
+function buildClosureList(row) {
+    var html = '';
+    for (var i = 0; i < row.reviewers.length; i++) {
+        var r = row.reviewers[i];
+        var isResolved = r.opinion === 'agree';
+        var iconCls = isResolved ? 'resolved' : 'open';
+        var iconChar = isResolved ? '✓' : '!';
+        html += '<div class="closure-item">';
+        html += '<div class="closure-icon ' + iconCls + '">' + iconChar + '</div>';
+        html += '<div class="closure-content">';
+        html += '<div class="closure-title">' + r.name + '（' + r.role + '）</div>';
+        if (r.comment) {
+            html += '<div class="closure-desc">' + r.comment + '</div>';
+        }
+        if (isResolved) {
+            html += '<div class="closure-resolution">意见已闭环：同意通过</div>';
+        } else {
+            html += '<div class="closure-resolution">意见已闭环：' + (r.opinion === 'conditional' ? '有条件同意，条件已满足' : '不同意，已沟通达成一致') + '</div>';
+        }
+        html += '</div></div>';
+    }
+    $('#closure-list').html(html);
+}
+
+function submitOpinion() {
+    var opinion = $('input[name="opinion"]:checked').val();
+    var comment = $('#opinion-comment').val();
+    if (!opinion) {
+        parent.Common.showInfo('请选择评审意见');
+        return;
+    }
+    if (!comment.trim()) {
+        parent.Common.showInfo('请填写评审意见内容');
+        return;
+    }
+    parent.Common.showNotification('评审意见', '评审意见已提交成功', 'success');
+    $('input[name="opinion"]').prop('checked', false);
+    $('#opinion-comment').val('');
+}
+
+function confirmConclusion() {
+    var conclusion = $('#conclusion-select').combobox('getValue');
+    var summary = $('#conclusion-summary').val();
+    if (!conclusion) {
+        parent.Common.showInfo('请选择评审结论');
+        return;
+    }
+    parent.Common.showNotification('评审结论', '评审结论已确认：' + conclusion, 'success');
+}
+
+function openNewReviewDialog() {
+    $('#review-type').combobox('clear');
+    $('#review-scope').val('');
+    $('#reviewer-list').empty();
+    addReviewerRow();
+    $('#new-review-dlg').dialog({
+        title: '发起评审',
+        width: 520,
+        modal: true,
+        closed: false,
+        buttons: [{
+            text: '提交',
+            iconCls: 'icon-ok',
+            handler: function () {
+                var reviewType = $('#review-type').combobox('getValue');
+                if (!reviewType) {
+                    parent.Common.showInfo('请选择评审类型');
+                    return;
+                }
+                parent.Common.showNotification('发起评审', '评审已成功发起：' + reviewType, 'success');
+                $('#new-review-dlg').dialog('close');
+            }
+        }, {
+            text: '取消',
+            handler: function () {
+                $('#new-review-dlg').dialog('close');
+            }
+        }]
+    });
+}
+
+function addReviewerRow() {
+    var row = $(
+        '<div class="reviewer-row">' +
+        '<input class="easyui-combobox reviewer-name" style="width:140px;" ' +
+        'data-options="valueField:\'name\',textField:\'name\',panelHeight:\'auto\',editable:false,data:[{name:\'陈工\'},{name:\'刘工\'},{name:\'黄工\'},{name:\'张工\'},{name:\'李工\'}],prompt:\'选择评审人\'">' +
+        '<select class="easyui-combobox reviewer-role" style="width:140px;" ' +
+        'data-options="panelHeight:\'auto\',editable:false,data:[{value:\'评审组长\',text:\'评审组长\'},{value:\'设计评审专家\',text:\'设计评审专家\'},{value:\'可靠性评审专家\',text:\'可靠性评审专家\'},{value:\'工艺评审专家\',text:\'工艺评审专家\'},{value:\'测试评审专家\',text:\'测试评审专家\'}],prompt:\'选择角色\'">' +
+        '</select>' +
+        '<button class="remove-reviewer" onclick="removeReviewer(this)" title="移除">×</button>' +
+        '</div>'
+    );
+    $('#reviewer-list').append(row);
+    $.parser.parse(row);
+}
+
+function removeReviewer(btn) {
+    if ($('#reviewer-list .reviewer-row').length > 1) {
+        $(btn).closest('.reviewer-row').remove();
+    } else {
+        parent.Common.showInfo('至少保留一位评审人');
+    }
+}
+
+$(function () {
+    var data = MockData.get('reviewData');
+    $('#dg').datagrid('loadData', { total: data.length, rows: data });
+    if (data.length > 0) $('#dg').datagrid('selectRow', 0);
+});
+</script>
+</body>
+</html>

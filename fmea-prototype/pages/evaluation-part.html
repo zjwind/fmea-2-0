@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>部件级DRBFM触发评估</title>
+<link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+<link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+<link rel="stylesheet" href="../css/custom.css">
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+<script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+<script src="../js/mock-data.js"></script>
+<script src="../js/common.js"></script>
+<style>
+body{background:#f1f3f5;padding:12px;font-family:var(--font-family)}
+.step-bar{display:flex;align-items:center;justify-content:center;padding:12px 0;background:#fff;border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow-sm);flex-wrap:wrap;gap:2px}
+.step-item{display:flex;align-items:center;font-size:11px;color:var(--gray-500);padding:3px 6px;border-radius:4px;transition:all .2s}
+.step-item .step-num{width:22px;height:22px;border-radius:50%;background:var(--gray-300);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:4px;flex-shrink:0;transition:all .2s}
+.step-item.active .step-num{background:var(--primary);box-shadow:0 2px 8px rgba(26,115,232,.35)}
+.step-item.active{color:var(--primary);font-weight:700}
+.step-item.done .step-num{background:var(--success)}
+.step-item.done{color:var(--success)}
+.step-item.disabled{color:var(--gray-400)}
+.step-arrow{color:var(--gray-300);font-size:12px;margin:0 1px}
+.step-content{background:#fff;border-radius:var(--radius);padding:16px;min-height:500px;box-shadow:var(--shadow-sm)}
+.step-panel{display:none}
+.step-panel.active{display:block}
+.nav-bar{display:flex;justify-content:space-between;margin-top:12px}
+.nav-bar .btn-group{display:flex;gap:8px}
+.dim-section{border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.dim-header{background:var(--gray-50);padding:8px 14px;font-weight:700;font-size:13px;border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center}
+.dim-body{padding:10px 14px}
+.dim-group{margin-bottom:10px}
+.dim-group-title{font-weight:700;font-size:12px;color:var(--primary);margin-bottom:6px;padding:3px 8px;background:var(--primary-light);border-radius:3px;display:inline-block}
+.dim-option-row{display:flex;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid var(--gray-100)}
+.dim-option-row:last-child{border-bottom:none}
+.dim-option-text{flex:1;padding-right:12px;color:var(--gray-700)}
+.dim-radio-group{display:flex;gap:20px;min-width:180px;justify-content:center}
+.dim-radio-group label{cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;color:var(--gray-600)}
+.dim-radio-group label:hover{color:var(--primary)}
+.risk-tag{display:inline-block;padding:3px 12px;border-radius:3px;font-weight:700;font-size:13px;color:#fff}
+.risk-H{background:var(--danger)}
+.risk-M{background:var(--warning);color:var(--gray-800)}
+.risk-L{background:var(--gray-400);color:#fff}
+.score-formula{background:#f0f7ff;border:1px solid #b3d4fc;border-radius:var(--radius);padding:12px 16px;margin:12px 0;font-size:13px;line-height:2}
+.score-formula .hl{color:var(--primary);font-weight:700}
+.eval-item-card{border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.eval-item-header{background:var(--gray-50);padding:10px 14px;font-weight:700;font-size:13px;border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center}
+.eval-item-body{padding:12px 14px}
+.score-row{display:flex;align-items:center;margin-bottom:6px;font-size:13px}
+.score-row .label{width:110px;text-align:right;margin-right:10px;color:var(--gray-600)}
+.score-row .value{font-weight:700;color:var(--gray-800)}
+.score-row .weight{color:var(--gray-500);font-size:12px;margin-left:4px}
+.conclusion-row{display:flex;align-items:center;margin-bottom:8px;font-size:13px}
+.conclusion-row .label{width:130px;text-align:right;margin-right:10px;color:var(--gray-600);flex-shrink:0}
+.validation-error{background:#fff5f5;border:1px solid #ffc9c9;border-radius:var(--radius);padding:8px 12px;margin:6px 0;font-size:12px;color:var(--danger)}
+.match-yes{color:var(--success);font-weight:700}
+.match-no{color:var(--danger);font-weight:700}
+.section-title{font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--primary)}
+.info-box{padding:12px 16px;border-radius:var(--radius);margin:10px 0;font-size:13px;line-height:1.8}
+.info-box-green{background:#e6f4ea;border:1px solid #b7eb8f;color:#1e7e34}
+.info-box-blue{background:#e8f0fe;border:1px solid #b3d4fc;color:#1557b0}
+.info-box-yellow{background:#fff8e1;border:1px solid #ffe082;color:#856404}
+.collab-card{border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:#fff;transition:box-shadow .2s}
+.collab-card:hover{box-shadow:var(--shadow-md)}
+.collab-card .info{flex:1}
+.collab-card .info .name{font-weight:700;font-size:13px;color:var(--gray-800)}
+.collab-card .info .points{font-size:12px;color:var(--gray-600);margin-top:2px}
+.sign-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px}
+.sign-done{background:#e6f4ea;color:var(--success);border:1px solid #b7eb8f}
+.sign-pending{background:#fff8e1;color:#856404;border:1px solid #ffe082}
+.merged-tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;margin-left:4px}
+.merged-sys{background:var(--primary-light);color:var(--primary);border:1px solid #b3d4fc}
+.merged-part{background:#e6f4ea;color:var(--success);border:1px solid #b7eb8f}
+</style>
+</head>
+<body>
+<div class="step-bar" id="stepBar"></div>
+<div class="step-content" id="stepContent"></div>
+<div class="nav-bar">
+<div class="btn-group">
+<a id="btnPrev" href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-back'" onclick="prevStep()">上一步</a>
+</div>
+<div class="btn-group">
+<span id="stepInfo" style="line-height:30px;font-size:13px;color:var(--gray-500);margin-right:10px"></span>
+<a id="btnNext" href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-next'" onclick="nextStep()">下一步</a>
+</div>
+</div>
+<div id="uploadDialog" class="easyui-dialog" title="文件上传" style="width:420px;padding:20px" data-options="closed:true,modal:true">
+<div style="margin-bottom:12px">
+<input id="uploadFile" class="easyui-filebox" label="选择文件:" labelPosition="top" style="width:100%" data-options="buttonText:'浏览',accept:'.xlsx,.xls'">
+</div>
+<div style="text-align:right;padding-top:10px;border-top:1px solid var(--gray-200)">
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="confirmUpload()">确认上传</a>
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#uploadDialog').dialog('close')">取消</a>
+</div>
+</div>
+<div id="matchDialog" class="easyui-dialog" title="自动匹配结果" style="width:620px;height:420px" data-options="closed:true,modal:true">
+<table id="matchResultGrid"></table>
+</div>
+<div id="submitDialog" class="easyui-dialog" title="提交审核" style="width:380px;padding:20px" data-options="closed:true,modal:true">
+<div style="text-align:center;font-size:14px;margin-bottom:16px">确认提交评估表进行审核？</div>
+<div style="text-align:right">
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="confirmSubmit()">确认提交</a>
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#submitDialog').dialog('close')">取消</a>
+</div>
+</div>
+<div id="confirmDialog" class="easyui-dialog" title="评估确认" style="width:520px;padding:20px" data-options="closed:true,modal:true">
+<div id="confirmDialogContent"></div>
+<div style="text-align:right;margin-top:16px">
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="doConfirmEval()">确认</a>
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#confirmDialog').dialog('close')">取消</a>
+</div>
+</div>
+<div id="collabDialog" class="easyui-dialog" title="添加协作人" style="width:500px;padding:20px" data-options="closed:true,modal:true">
+<div style="margin-bottom:12px">
+<input id="collabUser" class="easyui-combobox" label="选择协作人:" labelPosition="top" style="width:100%" data-options="valueField:'id',textField:'name',panelHeight:'auto',editable:false,data:[{id:1,name:'张伟 - 射频工程师'},{id:2,name:'李明 - 光模块工程师'},{id:3,name:'王芳 - 电源工程师'},{id:4,name:'陈刚 - 软件工程师'},{id:5,name:'赵敏 - 测试工程师'}]">
+</div>
+<div style="margin-bottom:12px">
+<div style="margin-bottom:6px;font-size:13px;font-weight:700">负责变更点：</div>
+<div id="collabChangePoints" style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px"></div>
+</div>
+<div style="text-align:right;padding-top:10px;border-top:1px solid var(--gray-200)">
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="addCollaborator()">确认添加</a>
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#collabDialog').dialog('close')">取消</a>
+</div>
+</div>
+<div id="signDialog" class="easyui-dialog" title="协作人签核" style="width:380px;padding:20px" data-options="closed:true,modal:true">
+<div id="signDialogContent" style="text-align:center;font-size:14px;margin-bottom:16px"></div>
+<div style="text-align:right">
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="doSign()">确认签核</a>
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#signDialog').dialog('close')">取消</a>
+</div>
+</div>
+
+<script>
+function getMockData(key){
+if(parent && parent.Common && parent.Common.getMockData){
+var d = parent.Common.getMockData(key);
+if(d) return d;
+}
+if(typeof Common !== 'undefined' && Common.getMockData){
+return Common.getMockData(key);
+}
+return null;
+}
+
+var steps = [
+{name:'协作人指派'},
+{name:'协作人签核'},
+{name:'变更点清单导入'},
+{name:'质量策划导入'},
+{name:'自动匹配'},
+{name:'提交审核'},
+{name:'历史问题导入'},
+{name:'五维风险评估'},
+{name:'风险综合评分'},
+{name:'评估确认'}
+];
+var currentStep = 0;
+var completedSteps = {};
+var submitCount = 0;
+var isSubmitted = false;
+var uploadType = '';
+var changeListData = [];
+var qualityPlanData = [];
+var historyIssueData = [];
+var matchResults = [];
+var dimensionData = {};
+var scoreData = {};
+var collaborators = [];
+var signTargetId = null;
+
+function loadMockData(){
+var rawChangeList = getMockData('changeList');
+if(rawChangeList && rawChangeList.length>0){
+changeListData = transformChangeList(rawChangeList);
+}else{
+changeListData = getDefaultChangeList();
+}
+var rawQP = getMockData('qualityPlan');
+if(rawQP){
+qualityPlanData = transformQualityPlan(rawQP);
+}else{
+qualityPlanData = getDefaultQualityPlan();
+}
+var rawHI = getMockData('historyIssues');
+if(rawHI && rawHI.length>0){
+historyIssueData = transformHistoryIssues(rawHI);
+}else{
+historyIssueData = getDefaultHistoryIssues();
+}
+dimensionData = getDefaultDimensionOpts();
+}
+
+function transformChangeList(raw){
+var result = [];
+var idCounter = 1;
+for(var i=0;i<raw.length;i++){
+var item = raw[i];
+var levelNum = item.level==='SYSTEM'?0:(item.level==='SUBSYSTEM'?1:2);
+var row = {
+id:idCounter++,
+level:levelNum,
+itemId:item.id,
+structureName:item.structure_name,
+devType:item.dev_type==='NEW'?'自主开发':(item.dev_type==='MODIFY'?'联合开发':'供应商开发'),
+imnOption:item.imn_option==='必选'?'M':(item.imn_option==='可选'?'N':'I'),
+changePoint:item.change_point,
+qualityMatch:'',
+source:levelNum===0?'system':'part',
+_parentId:0
+};
+if(item.children && item.children.length>0){
+row.children = [];
+var parentId = row.id;
+for(var c=0;c<item.children.length;c++){
+var child = item.children[c];
+var childLevel = child.level==='SYSTEM'?0:(child.level==='SUBSYSTEM'?1:2);
+row.children.push({
+id:idCounter++,
+level:childLevel,
+itemId:child.id,
+structureName:child.structure_name,
+devType:child.dev_type==='NEW'?'自主开发':(child.dev_type==='MODIFY'?'联合开发':'供应商开发'),
+imnOption:child.imn_option==='必选'?'M':(child.imn_option==='可选'?'N':'I'),
+changePoint:child.change_point,
+qualityMatch:'',
+source:'part',
+_parentId:parentId
+});
+}
+}
+result.push(row);
+}
+return result;
+}
+
+function transformQualityPlan(raw){
+var items = [];
+if(raw.objectives){
+for(var i=0;i<raw.objectives.length;i++){
+items.push({category:'质量目标',riskSubType:'目标'+(i+1),guide:raw.objectives[i]});
+}
+}
+if(raw.standards){
+for(var i=0;i<raw.standards.length;i++){
+items.push({category:'适用标准',riskSubType:'标准'+(i+1),guide:raw.standards[i]});
+}
+}
+return items.length>0?items:getDefaultQualityPlan();
+}
+
+function transformHistoryIssues(raw){
+var items = [];
+for(var i=0;i<raw.length;i++){
+var h = raw[i];
+items.push({
+faultOrderNo:h.id||'',
+issueNo:h.id||'',
+issueType:h.severity==='H'?'严重问题':'一般问题',
+domain:h.product||'',
+productModel:h.project||'',
+issueDesc:h.failure_mode||'',
+detailDesc:h.cause||'',
+solution:h.effect||''
+});
+}
+return items.length>0?items:getDefaultHistoryIssues();
+}
+
+function getDefaultChangeList(){
+return [
+{id:1,level:0,itemId:'1',structureName:'交换机S5800V2',devType:'联合开发',imnOption:'M',changePoint:'整机架构升级',qualityMatch:'',source:'system',_parentId:0,children:[
+{id:2,level:1,itemId:'1.1',structureName:'MAC芯片',devType:'供应商开发',imnOption:'I',changePoint:'端口速率从1G升级到2.5G',qualityMatch:'',source:'part',_parentId:1},
+{id:3,level:1,itemId:'1.2',structureName:'光模块',devType:'供应商开发',imnOption:'N',changePoint:'新增25G光模块支持',qualityMatch:'',source:'part',_parentId:1},
+{id:4,level:1,itemId:'1.3',structureName:'电源模块',devType:'自主开发',imnOption:'M',changePoint:'功耗优化调整',qualityMatch:'',source:'part',_parentId:1}
+]},
+{id:5,level:0,itemId:'2',structureName:'路由器CR16010',devType:'联合开发',imnOption:'M',changePoint:'转发引擎升级',qualityMatch:'',source:'system',_parentId:0,children:[
+{id:6,level:1,itemId:'2.1',structureName:'主控板',devType:'自主开发',imnOption:'M',changePoint:'主控芯片更换',qualityMatch:'',source:'part',_parentId:5},
+{id:7,level:1,itemId:'2.2',structureName:'交换网板',devType:'联合开发',imnOption:'I',changePoint:'交换容量提升至6.4T',qualityMatch:'',source:'part',_parentId:5},
+{id:8,level:1,itemId:'2.3',structureName:'接口模块',devType:'供应商开发',imnOption:'N',changePoint:'新增400GE接口',qualityMatch:'',source:'part',_parentId:5}
+]},
+{id:9,level:0,itemId:'3',structureName:'无线AC控制器WAC6800',devType:'自主开发',imnOption:'I',changePoint:'WiFi6E协议支持',qualityMatch:'',source:'system',_parentId:0,children:[
+{id:10,level:1,itemId:'3.1',structureName:'基带处理单元',devType:'自主开发',imnOption:'I',changePoint:'基带算法重构',qualityMatch:'',source:'part',_parentId:9},
+{id:11,level:1,itemId:'3.2',structureName:'射频单元',devType:'供应商开发',imnOption:'M',changePoint:'6GHz频段支持',qualityMatch:'',source:'part',_parentId:9}
+]}
+];
+}
+
+function getDefaultQualityPlan(){
+return [
+{category:'MAC芯片',riskSubType:'端口速率变更',guide:'需验证2.5G速率下的信号完整性和误码率指标'},
+{category:'光模块',riskSubType:'新增光模块类型',guide:'需验证25G光模块的兼容性和温升指标'},
+{category:'电源模块',riskSubType:'功耗变更',guide:'需验证散热设计和电源冗余能力'},
+{category:'主控板',riskSubType:'核心芯片更换',guide:'需验证新芯片的稳定性和性能指标'},
+{category:'交换网板',riskSubType:'交换容量提升',guide:'需验证大流量下的转发性能和时延指标'},
+{category:'射频单元',riskSubType:'频段扩展',guide:'需验证6GHz频段的射频性能和合规性'}
+];
+}
+
+function getDefaultHistoryIssues(){
+return [
+{faultOrderNo:'FT-2024-0012',issueNo:'ISS-2024-0045',issueType:'硬件缺陷',domain:'数据通信',productModel:'S5800V2-28C',issueDesc:'MAC芯片1G端口偶发丢包',detailDesc:'高负载下1G端口0.01%丢包率',solution:'升级MAC芯片固件V2.3.1'},
+{faultOrderNo:'FT-2024-0056',issueNo:'ISS-2024-0102',issueType:'硬件缺陷',domain:'数据通信',productModel:'S5800V2-52C',issueDesc:'光模块温度异常',detailDesc:'25G光模块持续满载2小时后温度超70℃',solution:'优化光模块散热片设计'},
+{faultOrderNo:'FT-2024-0078',issueNo:'ISS-2024-0135',issueType:'兼容性问题',domain:'数据通信',productModel:'CR16010-F',issueDesc:'400GE接口协商失败',detailDesc:'400GE接口与某厂商设备FEC协商不一致',solution:'增加FEC模式自适应协商功能'}
+];
+}
+
+function getDefaultDimensionOpts(){
+return {
+tech_novelty:{name:'技术新颖性',high:['全新技术架构，无历史积累','首次应用新协议/新标准','核心技术路线变更，无行业参考案例'],mid:['部分技术借鉴已有方案','有类似行业应用但需适配'],low:['成熟技术微调优化','标准化组件直接替换']},
+impact_scope:{name:'影响范围',high:['影响3个以上子系统','涉及核心业务链路','影响全网部署'],mid:['影响2个子系统','涉及非核心业务链路','影响部分站点部署'],low:['仅影响单一模块','不影响业务链路','仅影响个别站点']},
+severity:{name:'失效严重度',high:['失效导致系统不可用','失效导致安全漏洞','失效导致数据丢失'],mid:['失效导致性能降级','失效导致部分功能异常','失效需人工干预恢复'],low:['失效仅影响非关键指标','失效可自动恢复','失效仅影响用户体验']},
+change_complexity:{name:'变更复杂度',high:['涉及多团队协同开发','需新增测试设备/环境','变更涉及软硬件协同'],mid:['需2个团队配合','需少量测试环境调整','变更以硬件为主或软件为主'],low:['单一团队可完成','现有测试环境可用','变更内容单一明确']},
+history_issue:{name:'历史问题',high:['同类变更曾导致严重故障','同类问题在多个产品重复出现','历史问题尚未彻底解决'],mid:['同类变更曾出现一般问题','历史问题已解决但根因不明确'],low:['无同类变更历史问题','历史问题已彻底解决并验证']}
+};
+}
+
+function buildStepBar(){
+var html = '';
+for(var i=0;i<steps.length;i++){
+if(i>0) html += '<span class="step-arrow">→</span>';
+var cls = 'step-item';
+if(completedSteps[i]) cls += ' done';
+else if(i === currentStep) cls += ' active';
+else cls += ' disabled';
+var numText = completedSteps[i] ? '✓' : (i+1);
+html += '<div class="'+cls+'"><span class="step-num">'+numText+'</span><span>'+steps[i].name+'</span></div>';
+}
+$('#stepBar').html(html);
+}
+
+function buildStepContent(){
+var html = '';
+html += buildStepCollabAssign();
+html += buildStepCollabSign();
+html += buildStepChangeList();
+html += buildStepQualityPlan();
+html += buildStepAutoMatch();
+html += buildStepSubmit();
+html += buildStepHistoryIssue();
+html += buildStepDimension();
+html += buildStepScore();
+html += buildStepConfirm();
+$('#stepContent').html(html);
+$('.step-panel').removeClass('active').eq(currentStep).addClass('active');
+$('#stepInfo').text('步骤 '+(currentStep+1)+' / '+steps.length);
+$('#btnPrev').linkbutton(currentStep===0?'disable':'enable');
+updateNextBtn();
+}
+
+function updateNextBtn(){
+$('#btnNext').linkbutton(currentStep===steps.length-1?'disable':'enable');
+}
+
+function buildStepCollabAssign(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">协作人指派</div>';
+h += '<div class="info-box info-box-blue" style="margin-bottom:12px">TSE可指派多名协作人，各协作人负责指定变更点的编辑。协作人仅可编辑被指派的变更点。</div>';
+h += '<div style="margin-bottom:12px"><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-add\'" onclick="openCollabDialog()">添加协作人</a></div>';
+h += '<div id="collabListArea"></div>';
+h += '</div>';
+return h;
+}
+
+function buildStepCollabSign(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">协作人签核</div>';
+h += '<div class="info-box info-box-yellow" style="margin-bottom:12px">所有协作人完成签核后，TSE方可提交评估表。</div>';
+h += '<div id="signListArea"></div>';
+h += '<div id="signStatusArea" style="margin-top:12px;display:none"></div>';
+h += '</div>';
+return h;
+}
+
+function buildStepChangeList(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">变更点清单导入（合并视图）</div>';
+h += '<div class="info-box info-box-blue" style="margin-bottom:12px">系统级(LEVEL=0)评估内容保留不变，部件级内容按item_id合并。<span class="merged-tag merged-sys">系统级</span><span class="merged-tag merged-part">部件级</span></div>';
+h += '<div style="margin-bottom:12px"><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-import\'" onclick="openUpload(\'changeList\')">导入变更点清单</a>';
+h += '<span style="margin-left:12px;font-size:12px;color:var(--gray-500)">由TSE统一上传，协作人不可自行上传</span></div>';
+h += '<table id="changeListTreeGrid" style="width:100%;height:360px"></table>';
+h += '</div>';
+return h;
+}
+
+function buildStepQualityPlan(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">质量策划表导入</div>';
+h += '<div style="margin-bottom:12px"><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-import\'" onclick="openUpload(\'qualityPlan\')">导入质量策划表</a>';
+h += '<span style="margin-left:12px;font-size:12px;color:var(--gray-500)">由TSE统一上传</span></div>';
+h += '<div id="qualityPlanPanel" class="easyui-panel" title="质量策划内容" style="width:100%;height:360px;padding:10px" data-options="collapsible:true">';
+h += '<div style="text-align:center;color:var(--gray-500);padding:60px 0">暂未导入质量策划表</div>';
+h += '</div>';
+h += '</div>';
+return h;
+}
+
+function buildStepAutoMatch(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">自动匹配</div>';
+h += '<div style="margin-bottom:12px"><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-reload\'" onclick="doAutoMatch()">自动匹配</a>';
+h += '<span style="margin-left:12px;font-size:12px;color:var(--gray-500)">将质量策划内容与变更点清单进行模糊匹配</span></div>';
+h += '<div id="matchPanel" class="easyui-panel" title="匹配状态" style="width:100%;height:360px;padding:10px" data-options="collapsible:true">';
+h += '<div style="text-align:center;color:var(--gray-500);padding:60px 0">请点击"自动匹配"按钮执行匹配</div>';
+h += '</div>';
+h += '</div>';
+return h;
+}
+
+function buildStepSubmit(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">提交审核</div>';
+h += '<div style="margin-bottom:12px">';
+h += '<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-ok\'" onclick="showSubmitDialog()" id="btnSubmit">提交审核</a>';
+h += '<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-undo\'" onclick="doWithdraw()" id="btnWithdraw" style="display:none;margin-left:8px">撤回</a>';
+h += '<span id="submitInfo" style="margin-left:16px;font-size:13px;color:var(--gray-600)"></span>';
+h += '</div>';
+h += '<div class="easyui-panel" title="提交审核信息" style="width:100%;height:340px;padding:10px" data-options="collapsible:true">';
+h += '<div style="padding:16px">';
+h += '<p style="font-size:14px;margin-bottom:14px;font-weight:700">提交审核说明</p>';
+h += '<ul style="line-height:2.2;font-size:13px;color:var(--gray-600);padding-left:20px">';
+h += '<li>所有协作人签核完成后，TSE方可提交评估表</li>';
+h += '<li>提交后评估表将发送至PSE进行审核</li>';
+h += '<li>PSE审核通过后方可进入后续步骤</li>';
+h += '<li>提交后如需修改，可点击"撤回"按钮撤回</li>';
+h += '</ul>';
+h += '<div class="info-box info-box-green" style="margin-top:16px">';
+h += '<div>当前状态：<span id="submitStatus" style="font-weight:700">草稿</span></div>';
+h += '<div style="margin-top:4px">提交次数：<span id="submitCountText">0</span></div>';
+h += '</div></div></div>';
+h += '</div>';
+return h;
+}
+
+function buildStepHistoryIssue(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">历史问题导入</div>';
+h += '<div style="margin-bottom:12px"><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-import\'" onclick="openUpload(\'historyIssue\')">导入历史问题</a>';
+h += '<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-search\'" onclick="viewSystemHistory()" style="margin-left:8px">查看系统级历史问题</a>';
+h += '<span style="margin-left:12px;font-size:12px;color:var(--gray-500)">追加模式导入</span></div>';
+h += '<table id="historyIssueGrid" style="width:100%;height:360px"></table>';
+h += '</div>';
+return h;
+}
+
+function buildStepDimension(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">五维风险评估（LEVEL=0变更点）</div>';
+h += '<div class="info-box info-box-blue" style="margin-bottom:12px">对每个系统级（LEVEL=0）变更点进行五个维度的评估。</div>';
+h += '<div id="dimensionTabs" class="easyui-tabs" style="width:100%;height:400px" data-options="tabPosition:\'top\',plain:true"></div>';
+h += '<div style="margin-top:10px;text-align:right"><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-ok\'" onclick="doScore()" style="padding:4px 16px">评分</a></div>';
+h += '</div>';
+return h;
+}
+
+function buildStepScore(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">风险综合评分</div>';
+h += '<div class="score-formula">';
+h += '风险综合评分 = 技术新颖性<span class="hl">×15%</span> + 影响范围<span class="hl">×30%</span> + 失效严重度<span class="hl">×30%</span> + 变更复杂度<span class="hl">×20%</span> + 历史问题<span class="hl">×5%</span>';
+h += '</div>';
+h += '<div class="info-box info-box-yellow" style="margin-bottom:12px">风险等级：<span style="color:var(--danger);font-weight:700">H（≥8分）</span> | <span style="color:#856404;font-weight:700">M（5~8分）</span> | <span style="color:var(--gray-500);font-weight:700">L（<5分）</span></div>';
+h += '<div id="scoreResultArea"></div>';
+h += '</div>';
+return h;
+}
+
+function buildStepConfirm(){
+var h = '<div class="step-panel">';
+h += '<div class="section-title">评估确认</div>';
+h += '<div style="margin-bottom:12px;font-size:13px;color:var(--gray-600)">确认所有LEVEL=0变更点的五维风险评估已填写完整后，点击"确认评估"按钮完成评估并创建DRBFM分析任务。</div>';
+h += '<div id="validationArea"></div>';
+h += '<div style="margin-top:16px;text-align:center"><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-ok\'" onclick="showConfirmDialog()" style="padding:6px 24px">确认评估</a></div>';
+h += '</div>';
+return h;
+}
+
+function openCollabDialog(){
+var cpHtml = '';
+var allItems = [];
+for(var i=0;i<changeListData.length;i++){
+if(changeListData[i].children){
+for(var c=0;c<changeListData[i].children.length;c++){
+allItems.push(changeListData[i].children[c]);
+}
+}
+}
+for(var i=0;i<allItems.length;i++){
+cpHtml += '<label style="display:block;margin-bottom:4px;font-size:12px"><input type="checkbox" name="cpSelect" value="'+allItems[i].id+'" data-label="'+allItems[i].itemId+' '+allItems[i].structureName+'"> '+allItems[i].itemId+' '+allItems[i].structureName+' - '+allItems[i].changePoint+'</label>';
+}
+$('#collabChangePoints').html(cpHtml);
+$('#collabUser').combobox('clear');
+$('#collabDialog').dialog('open');
+}
+
+function addCollaborator(){
+var user = $('#collabUser').combobox('getValue');
+var userText = $('#collabUser').combobox('getText');
+if(!user){$.messager.alert('提示','请选择协作人','warning');return}
+var checked = [];
+$('input[name=cpSelect]:checked').each(function(){checked.push({id:$(this).val(),label:$(this).data('label')})});
+if(checked.length===0){$.messager.alert('提示','请选择负责的变更点','warning');return}
+var pointNames = [];
+for(var i=0;i<checked.length;i++) pointNames.push(checked[i].label);
+collaborators.push({
+id:collaborators.length+1,
+userId:user,
+userName:userText.split(' - ')[0],
+role:userText.split(' - ')[1]||'',
+changePoints:checked,
+pointNames:pointNames.join('、'),
+signed:false,
+signTime:''
+});
+$('#collabDialog').dialog('close');
+renderCollabList();
+renderSignList();
+completedSteps[0] = true;
+buildStepBar();
+}
+
+function renderCollabList(){
+var h = '';
+if(collaborators.length===0){
+h = '<div style="text-align:center;color:var(--gray-500);padding:40px 0">暂未指派协作人，请点击"添加协作人"按钮</div>';
+}else{
+for(var i=0;i<collaborators.length;i++){
+var c = collaborators[i];
+h += '<div class="collab-card">';
+h += '<div class="info"><div class="name">'+c.userName+'（'+c.role+'）</div><div class="points">负责变更点：'+c.pointNames+'</div></div>';
+h += '<div><a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-remove\'" onclick="removeCollaborator('+c.id+')">移除</a></div>';
+h += '</div>';
+}
+}
+$('#collabListArea').html(h);
+$.parser.parse('#collabListArea');
+}
+
+function removeCollaborator(id){
+$.messager.confirm('确认','确定移除该协作人吗？',function(ok){
+if(ok){
+collaborators = collaborators.filter(function(c){return c.id!==id});
+renderCollabList();
+renderSignList();
+}
+});
+}
+
+function renderSignList(){
+var h = '';
+if(collaborators.length===0){
+h = '<div style="text-align:center;color:var(--gray-500);padding:40px 0">暂无协作人需要签核</div>';
+$('#signStatusArea').hide();
+}else{
+var allSigned = true;
+for(var i=0;i<collaborators.length;i++){
+var c = collaborators[i];
+var signHtml = c.signed ? '<span class="sign-tag sign-done">已签核 '+c.signTime+'</span>' : '<span class="sign-tag sign-pending">待签核</span> <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:\'icon-ok\'" onclick="openSignDialog('+c.id+')">签核</a>';
+if(!c.signed) allSigned = false;
+h += '<div class="collab-card">';
+h += '<div class="info"><div class="name">'+c.userName+'（'+c.role+'）</div><div class="points">负责变更点：'+c.pointNames+'</div></div>';
+h += '<div>'+signHtml+'</div>';
+h += '</div>';
+}
+if(allSigned && collaborators.length>0){
+$('#signStatusArea').html('<div class="info-box info-box-green"><span style="font-weight:700">✓ 所有协作人已完成签核，TSE可以提交评估表</span></div>').show();
+completedSteps[1] = true;
+}else{
+$('#signStatusArea').html('<div class="info-box info-box-yellow"><span style="font-weight:700">⚠ 尚有协作人未签核，TSE暂不可提交评估表</span></div>').show();
+completedSteps[1] = false;
+}
+}
+$('#signListArea').html(h);
+$.parser.parse('#signListArea');
+buildStepBar();
+}
+
+function openSignDialog(id){
+signTargetId = id;
+var c = collaborators.find(function(x){return x.id===id});
+if(!c) return;
+$('#signDialogContent').html('确认协作人 <strong>'+c.userName+'</strong> 签核？<br><span style="font-size:12px;color:var(--gray-500)">负责变更点：'+c.pointNames+'</span>');
+$('#signDialog').dialog('open');
+}
+
+function doSign(){
+var c = collaborators.find(function(x){return x.id===signTargetId});
+if(c){
+var now = new Date();
+c.signed = true;
+c.signTime = now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+}
+$('#signDialog').dialog('close');
+renderSignList();
+}
+
+function initChangeListGrid(){
+$('#changeListTreeGrid').treegrid({
+data:changeListData,
+idField:'id',
+treeField:'structureName',
+rownumbers:true,
+fitColumns:true,
+singleSelect:true,
+striped:true,
+columns:[[
+{field:'level',title:'LEVEL',width:50,align:'center',styler:function(){return 'font-weight:700;color:var(--primary)'}},
+{field:'itemId',title:'ID',width:60,align:'center'},
+{field:'structureName',title:'系统/部件名称',width:140,formatter:function(v,row){
+var tag = row.source==='system'?'<span class="merged-tag merged-sys">系统级</span>':'<span class="merged-tag merged-part">部件级</span>';
+return v+tag;
+}},
+{field:'devType',title:'开发类型',width:80,align:'center'},
+{field:'imnOption',title:'I/M/N',width:60,align:'center',formatter:function(v){var m={'I':'创新','M':'修改','N':'新增'};return m[v]||v}},
+{field:'changePoint',title:'变更点',width:160,editor:'text'},
+{field:'qualityMatch',title:'变更点描述(quality_match)',width:180}
+]],
+onClickCell:function(field,row){
+if(field==='changePoint') $('#changeListTreeGrid').treegrid('beginEdit',row.id);
+}
+});
+}
+
+function initHistoryGrid(){
+$('#historyIssueGrid').datagrid({
+data:historyIssueData,
+fitColumns:true,
+singleSelect:true,
+striped:true,
+rownumbers:true,
+columns:[[
+{field:'faultOrderNo',title:'故障单号',width:100},
+{field:'issueNo',title:'问题编号',width:100},
+{field:'issueType',title:'问题类型',width:70},
+{field:'domain',title:'涉及领域',width:70},
+{field:'productModel',title:'产品型号',width:90},
+{field:'issueDesc',title:'问题描述',width:140},
+{field:'detailDesc',title:'详细说明',width:180},
+{field:'solution',title:'解决方案',width:180}
+]]
+});
+}
+
+function initDimensionTabs(){
+var level0Items = getLevel0Items();
+var $tabs = $('#dimensionTabs');
+$tabs.tabs('clear');
+for(var i=0;i<level0Items.length;i++){
+var item = level0Items[i];
+var content = buildDimensionForm(item);
+$tabs.tabs('add',{title:item.itemId+' '+item.structureName,content:content,closable:false});
+}
+}
+
+function getLevel0Items(){
+var result = [];
+for(var i=0;i<changeListData.length;i++){
+if(changeListData[i].level===0) result.push(changeListData[i]);
+}
+return result;
+}
+
+function buildDimensionForm(item){
+if(!scoreData[item.id]) scoreData[item.id] = {};
+var dims = ['tech_novelty','impact_scope','severity','change_complexity','history_issue'];
+var h = '<div style="padding:8px;max-height:320px;overflow-y:auto">';
+for(var d=0;d<dims.length;d++){
+var dimKey = dims[d];
+var dim = dimensionData[dimKey];
+h += '<div class="dim-section">';
+h += '<div class="dim-header">'+dim.name+'</div>';
+h += '<div class="dim-body">';
+var groups = [{key:'high',label:'高组',opts:dim.high},{key:'mid',label:'中组',opts:dim.mid},{key:'low',label:'低组',opts:dim.low}];
+for(var g=0;g<groups.length;g++){
+h += '<div class="dim-group"><div class="dim-group-title">'+groups[g].label+'</div>';
+for(var o=0;o<groups[g].opts.length;o++){
+var rName = item.id+'_'+dimKey+'_'+groups[g].key+'_'+o;
+h += '<div class="dim-option-row">';
+h += '<span class="dim-option-text">'+groups[g].opts[o]+'</span>';
+h += '<span class="dim-radio-group">';
+h += '<label><input type="radio" name="'+rName+'" value="是" onchange="onDimChange('+item.id+',\''+dimKey+'\',\''+groups[g].key+'\','+o+',this.value)"> 是</label>';
+h += '<label><input type="radio" name="'+rName+'" value="否" onchange="onDimChange('+item.id+',\''+dimKey+'\',\''+groups[g].key+'\','+o+',this.value)"> 否</label>';
+h += '<label><input type="radio" name="'+rName+'" value="" onchange="onDimChange('+item.id+',\''+dimKey+'\',\''+groups[g].key+'\','+o+',this.value)"> 空白</label>';
+h += '</span></div>';
+}
+h += '</div>';
+}
+h += '</div></div>';
+}
+h += '</div>';
+return h;
+}
+
+function onDimChange(itemId,dimKey,groupKey,optIdx,val){
+if(!scoreData[itemId]) scoreData[itemId] = {};
+if(!scoreData[itemId][dimKey]) scoreData[itemId][dimKey] = {};
+scoreData[itemId][dimKey][groupKey+'_'+optIdx] = val;
+}
+
+function calcDimensionScore(itemId,dimKey){
+var d = scoreData[itemId] && scoreData[itemId][dimKey];
+if(!d) return -1;
+var dim = dimensionData[dimKey];
+var groups = [{key:'high',count:dim.high.length},{key:'mid',count:dim.mid.length},{key:'low',count:dim.low.length}];
+var hasHigh=false,hasMid=false,hasLow=false;
+for(var g=0;g<groups.length;g++){
+for(var o=0;o<groups[g].count;o++){
+var v = d[groups[g].key+'_'+o];
+if(v==='是'){
+if(groups[g].key==='high') hasHigh=true;
+if(groups[g].key==='mid') hasMid=true;
+if(groups[g].key==='low') hasLow=true;
+}
+}
+}
+if(hasHigh) return 10;
+if(hasMid) return 5;
+if(hasLow) return 2;
+return 0;
+}
+
+function calcRiskScore(itemId){
+var weights = {tech_novelty:0.15,impact_scope:0.30,severity:0.30,change_complexity:0.20,history_issue:0.05};
+var total = 0;
+var allFilled = true;
+for(var dimKey in weights){
+var s = calcDimensionScore(itemId,dimKey);
+if(s<0){allFilled=false;s=0}
+total += s * weights[dimKey];
+}
+return {score:Math.round(total*100)/100,allFilled:allFilled};
+}
+
+function getRiskLevel(score){if(score>=8) return 'H';if(score>=5) return 'M';return 'L'}
+function getRiskLabel(level){var m={'H':'必须进行DRBFM分析','M':'建议进行DRBFM分析','L':'可以不进行DRBFM分析'};return m[level]||''}
+
+function doScore(){
+var level0Items = getLevel0Items();
+var allOk = true;
+for(var i=0;i<level0Items.length;i++){var r = calcRiskScore(level0Items[i].id);if(!r.allFilled) allOk=false}
+if(!allOk) $.messager.alert('提示','部分变更点的五维评估选项未填写完整，评分结果可能不准确。','warning');
+buildScoreResultArea();
+completedSteps[8] = true;
+buildStepBar();
+}
+
+function buildScoreResultArea(){
+var level0Items = getLevel0Items();
+var h = '';
+for(var i=0;i<level0Items.length;i++){
+var item = level0Items[i];
+var r = calcRiskScore(item.id);
+var level = getRiskLevel(r.score);
+h += '<div class="eval-item-card">';
+h += '<div class="eval-item-header"><span>'+item.itemId+' '+item.structureName+' - '+item.changePoint+'</span>';
+h += '<span class="risk-tag risk-'+level+'">'+level+'级 ('+r.score+'分)</span></div>';
+h += '<div class="eval-item-body">';
+var dims = [{key:'tech_novelty',name:'技术新颖性',weight:'15%'},{key:'impact_scope',name:'影响范围',weight:'30%'},{key:'severity',name:'失效严重度',weight:'30%'},{key:'change_complexity',name:'变更复杂度',weight:'20%'},{key:'history_issue',name:'历史问题',weight:'5%'}];
+for(var d=0;d<dims.length;d++){
+var ds = calcDimensionScore(item.id,dims[d].key);
+var dsText = ds>=0?ds:'<span style="color:var(--danger)">未填写</span>';
+h += '<div class="score-row"><span class="label">'+dims[d].name+'：</span><span class="value">'+dsText+'</span><span class="weight">×'+dims[d].weight+'</span></div>';
+}
+h += '<div class="score-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-200)"><span class="label" style="font-weight:700">综合评分：</span><span class="value" style="font-size:18px;color:var(--primary)">'+r.score+'</span></div>';
+h += '<div class="conclusion-row"><span class="label">DRBFM触发评估建议：</span><span style="font-weight:700">'+getRiskLabel(level)+'</span></div>';
+h += '<div class="conclusion-row"><span class="label">建议理由：</span>';
+h += '<select class="easyui-combobox" name="reason_'+item.id+'" style="width:320px" data-options="editable:false,panelHeight:\'auto\'">';
+h += '<option value="score_map">分数映射预定义理由</option>';
+h += '<option value="ai_gen">AI动态生成</option>';
+h += '</select></div>';
+h += '<div class="conclusion-row"><span class="label">最终DRBFM触发结论：</span>';
+h += '<select class="easyui-combobox" name="conclusion_'+item.id+'" style="width:140px" data-options="editable:false,panelHeight:\'auto\'">';
+h += '<option value="H"'+(level==='H'?' selected':'')+'>H - 必须进行DRBFM分析</option>';
+h += '<option value="M"'+(level==='M'?' selected':'')+'>M - 建议进行DRBFM分析</option>';
+h += '<option value="L"'+(level==='L'?' selected':'')+'>L - 可以不进行DRBFM分析</option>';
+h += '</select></div>';
+h += '</div></div>';
+}
+$('#scoreResultArea').html(h);
+$.parser.parse('#scoreResultArea');
+}
+
+function openUpload(type){
+uploadType = type;
+var titles = {changeList:'导入变更点清单',qualityPlan:'导入质量策划表',historyIssue:'导入历史问题'};
+$('#uploadDialog').dialog('setTitle',titles[type]||'文件上传');
+$('#uploadFile').filebox('clear');
+$('#uploadDialog').dialog('open');
+}
+
+function confirmUpload(){
+$('#uploadDialog').dialog('close');
+$.messager.progress({title:'导入中',msg:'正在解析文件...'});
+setTimeout(function(){
+$.messager.progress('close');
+if(uploadType==='changeList') simulateChangeListImport();
+else if(uploadType==='qualityPlan') simulateQualityPlanImport();
+else if(uploadType==='historyIssue') simulateHistoryIssueImport();
+$.messager.show({title:'提示',msg:'文件导入成功！',timeout:2000});
+},1200);
+}
+
+function simulateChangeListImport(){initChangeListGrid();completedSteps[2]=true;buildStepBar()}
+function simulateQualityPlanImport(){
+var h = '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--gray-50)"><th style="padding:8px;border:1px solid var(--gray-200);text-align:left">风险小类</th><th style="padding:8px;border:1px solid var(--gray-200);text-align:left">风险策划指南</th><th style="padding:8px;border:1px solid var(--gray-200);text-align:left">匹配内容</th></tr></thead><tbody>';
+for(var i=0;i<qualityPlanData.length;i++) h += '<tr><td style="padding:6px 8px;border:1px solid var(--gray-200)">'+qualityPlanData[i].category+'</td><td style="padding:6px 8px;border:1px solid var(--gray-200)">'+qualityPlanData[i].riskSubType+'</td><td style="padding:6px 8px;border:1px solid var(--gray-200)">'+qualityPlanData[i].guide+'</td></tr>';
+h += '</tbody></table>';
+$('#qualityPlanPanel').panel('setContent',h);
+completedSteps[3]=true;buildStepBar();
+}
+function simulateHistoryIssueImport(){initHistoryGrid();completedSteps[6]=true;buildStepBar()}
+
+function viewSystemHistory(){
+var sysHistory = [
+{faultOrderNo:'FT-2024-0012',issueNo:'ISS-2024-0045',issueType:'硬件缺陷',domain:'数据通信',productModel:'S5800V2-28C',issueDesc:'MAC芯片1G端口偶发丢包',detailDesc:'高负载下1G端口0.01%丢包率',solution:'升级MAC芯片固件V2.3.1'},
+{faultOrderNo:'FT-2024-0035',issueNo:'ISS-2024-0078',issueType:'可靠性问题',domain:'数据通信',productModel:'CR16010-M',issueDesc:'主控板高温环境下复位',detailDesc:'环境温度超45℃时主控板异常复位',solution:'优化散热风道设计'},
+{faultOrderNo:'FT-2023-0089',issueNo:'ISS-2023-0156',issueType:'兼容性问题',domain:'无线通信',productModel:'WAC6800',issueDesc:'WiFi6终端关联失败',detailDesc:'部分WiFi6终端漫游时关联失败',solution:'优化AC漫游策略参数'},
+{faultOrderNo:'FT-2023-0112',issueNo:'ISS-2023-0198',issueType:'性能问题',domain:'安全',productModel:'USG6650',issueDesc:'IPSec VPN吞吐量不足',detailDesc:'开启IPSec加密后吞吐量下降60%',solution:'更换安全处理芯片'}
+];
+var dlg = $('<div id="sysHistDlg"></div>').appendTo('body');
+dlg.dialog({title:'系统级历史问题',width:700,height:400,modal:true,closed:false,onClose:function(){dlg.dialog('destroy')},content:'<table id="sysHistGrid"></table>'});
+setTimeout(function(){
+$('#sysHistGrid').datagrid({data:sysHistory,fitColumns:true,singleSelect:true,striped:true,rownumbers:true,columns:[[
+{field:'faultOrderNo',title:'故障单号',width:100},{field:'issueNo',title:'问题编号',width:100},{field:'issueType',title:'问题类型',width:70},{field:'domain',title:'涉及领域',width:70},{field:'productModel',title:'产品型号',width:90},{field:'issueDesc',title:'问题描述',width:140},{field:'solution',title:'解决方案',width:140}
+]]});
+},100);
+}
+
+function doAutoMatch(){
+matchResults = [];
+for(var i=0;i<changeListData.length;i++){
+var item = changeListData[i];
+var matched = false;
+var matchContent = '';
+for(var j=0;j<qualityPlanData.length;j++){
+if(item.structureName.indexOf(qualityPlanData[j].category)>=0 || qualityPlanData[j].category.indexOf(item.structureName)>=0){matched=true;matchContent=qualityPlanData[j].guide;break}
+}
+if(item.children){
+for(var c=0;c<item.children.length;c++){
+var child = item.children[c];
+for(var j=0;j<qualityPlanData.length;j++){
+if(child.structureName.indexOf(qualityPlanData[j].category)>=0 || qualityPlanData[j].category.indexOf(child.structureName)>=0){
+child.qualityMatch = qualityPlanData[j].guide;
+if(!matched){matched=true;matchContent='子项已匹配'}
+}
+}
+}
+}
+if(matched && !item.qualityMatch) item.qualityMatch = matchContent;
+matchResults.push({itemId:item.itemId,structureName:item.structureName,changePoint:item.changePoint,status:matched?'已匹配':'未匹配',matchContent:item.qualityMatch||'无'});
+}
+var h = '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--gray-50)"><th style="padding:8px;border:1px solid var(--gray-200);text-align:left">ID</th><th style="padding:8px;border:1px solid var(--gray-200);text-align:left">系统/部件名称</th><th style="padding:8px;border:1px solid var(--gray-200);text-align:left">变更点</th><th style="padding:8px;border:1px solid var(--gray-200);text-align:center">匹配状态</th></tr></thead><tbody>';
+for(var i=0;i<matchResults.length;i++){
+var r = matchResults[i];
+var sc = r.status==='已匹配'?'match-yes':'match-no';
+h += '<tr><td style="padding:6px 8px;border:1px solid var(--gray-200)">'+r.itemId+'</td><td style="padding:6px 8px;border:1px solid var(--gray-200)">'+r.structureName+'</td><td style="padding:6px 8px;border:1px solid var(--gray-200)">'+r.changePoint+'</td><td style="padding:6px 8px;border:1px solid var(--gray-200);text-align:center" class="'+sc+'">'+r.status+'</td></tr>';
+}
+h += '</tbody></table>';
+$('#matchPanel').panel('setContent',h);
+$('#matchResultGrid').datagrid({data:matchResults,fitColumns:true,singleSelect:true,columns:[[
+{field:'itemId',title:'ID',width:60},{field:'structureName',title:'系统/部件名称',width:140},{field:'changePoint',title:'变更点',width:160},{field:'status',title:'匹配状态',width:80,align:'center',formatter:function(v){return v==='已匹配'?'<span class="match-yes">'+v+'</span>':'<span class="match-no">'+v+'</span>'}},{field:'matchContent',title:'匹配内容',width:200}
+]]});
+$('#matchDialog').dialog('open');
+if(changeListData.length>0) $('#changeListTreeGrid').treegrid('loadData',changeListData);
+completedSteps[4] = true;
+buildStepBar();
+}
+
+function showSubmitDialog(){
+var allSigned = true;
+for(var i=0;i<collaborators.length;i++){if(!collaborators[i].signed){allSigned=false;break}}
+if(collaborators.length>0 && !allSigned){$.messager.alert('提示','尚有协作人未完成签核，无法提交评估表。','warning');return}
+$('#submitDialog').dialog('open');
+}
+
+function confirmSubmit(){
+$('#submitDialog').dialog('close');
+isSubmitted = true;
+submitCount++;
+$('#submitStatus').text('已提交').css('color','var(--warning)');
+$('#submitCountText').text(submitCount);
+$('#submitInfo').text('评估表已提交，等待PSE审核');
+$('#btnSubmit').hide();$('#btnWithdraw').show();
+completedSteps[5] = true;
+buildStepBar();
+$.messager.show({title:'提示',msg:'评估表已成功提交，已通知PSE审核！',timeout:3000});
+}
+
+function doWithdraw(){
+$.messager.confirm('确认','确定要撤回已提交的评估表吗？',function(ok){
+if(ok){
+isSubmitted = false;
+$('#submitStatus').text('草稿').css('color','var(--success)');
+$('#submitInfo').text('评估表已撤回');
+$('#btnSubmit').show();$('#btnWithdraw').hide();
+completedSteps[5] = false;
+buildStepBar();
+$.messager.show({title:'提示',msg:'评估表已撤回！',timeout:2000});
+}
+});
+}
+
+function showConfirmDialog(){
+var errors = validateEvaluation();
+var h = '';
+if(errors.length>0){
+h += '<div class="validation-error" style="margin-bottom:12px"><strong>存在未完成的评估项：</strong></div>';
+for(var i=0;i<errors.length;i++) h += '<div class="validation-error">'+errors[i]+'</div>';
+h += '<div style="margin-top:12px;color:var(--gray-500);font-size:12px">请完成所有评估项后再确认</div>';
+}else{
+h += '<div style="text-align:center;padding:20px;font-size:14px">所有LEVEL=0变更点的五维风险评估已填写完整。<br><br>确认后将自动创建DRBFM分析任务。</div>';
+}
+$('#confirmDialogContent').html(h);
+$('#confirmDialog').dialog('open');
+}
+
+function validateEvaluation(){
+var errors = [];
+var level0Items = getLevel0Items();
+var dims = ['tech_novelty','impact_scope','severity','change_complexity','history_issue'];
+for(var i=0;i<level0Items.length;i++){
+var item = level0Items[i];
+for(var d=0;d<dims.length;d++){
+var s = calcDimensionScore(item.id,dims[d]);
+if(s<0) errors.push('第'+item.itemId+'行 - '+item.structureName+'：'+dimensionData[dims[d]].name+'维度未填写');
+}
+}
+return errors;
+}
+
+function doConfirmEval(){
+var errors = validateEvaluation();
+if(errors.length>0){
+$('#confirmDialog').dialog('close');
+var h = '';
+for(var i=0;i<errors.length;i++) h += '<div class="validation-error">'+errors[i]+'</div>';
+$('#validationArea').html(h);
+$.messager.alert('校验失败','存在未完成的评估项，请补充完整后再确认。','error');
+return;
+}
+$('#confirmDialog').dialog('close');
+completedSteps[9] = true;
+buildStepBar();
+$.messager.alert('评估确认','评估已确认！系统已自动创建DRBFM分析任务，任务状态：结构分析。','info');
+}
+
+function prevStep(){if(currentStep>0){currentStep--;refreshStep()}}
+function nextStep(){if(currentStep<steps.length-1){currentStep++;refreshStep()}}
+function refreshStep(){buildStepBar();buildStepContent();setTimeout(afterStepRender,150)}
+
+function afterStepRender(){
+if(currentStep===0) renderCollabList();
+if(currentStep===1) renderSignList();
+if(currentStep===2 && changeListData.length>0) initChangeListGrid();
+if(currentStep===6 && historyIssueData.length>0) initHistoryGrid();
+if(currentStep===7) initDimensionTabs();
+if(currentStep===8) buildScoreResultArea();
+if(currentStep===9){
+var errors = validateEvaluation();
+var h = '';
+if(errors.length>0){
+h += '<div style="margin-bottom:8px;font-size:13px;color:var(--danger);font-weight:700">以下评估项尚未完成：</div>';
+for(var i=0;i<errors.length;i++) h += '<div class="validation-error">'+errors[i]+'</div>';
+}else{
+h += '<div style="padding:20px;text-align:center;color:var(--success);font-size:14px;font-weight:700">✓ 所有LEVEL=0变更点的五维风险评估已填写完整，可以进行确认</div>';
+}
+$('#validationArea').html(h);
+}
+if(currentStep===5){
+if(isSubmitted){$('#btnSubmit').hide();$('#btnWithdraw').show();$('#submitStatus').text('已提交').css('color','var(--warning)')}
+else{$('#btnSubmit').show();$('#btnWithdraw').hide();$('#submitStatus').text('草稿').css('color','var(--success)')}
+$('#submitCountText').text(submitCount);
+}
+}
+
+$(function(){
+loadMockData();
+buildStepBar();
+buildStepContent();
+setTimeout(afterStepRender,200);
+});
+</script>
+</body>
+</html>

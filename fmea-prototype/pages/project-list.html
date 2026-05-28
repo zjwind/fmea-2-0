@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">项目列表</div>
+    <div class="toolbar">
+        <span class="toolbar-title">筛选条件</span>
+        <select id="filter-bg" class="easyui-combobox" style="width:120px;" data-options="panelHeight:'auto',editable:false">
+            <option value="">全部BG</option>
+            <option value="CBG">CBG</option>
+            <option value="SBG">SBG</option>
+            <option value="EBG">EBG</option>
+        </select>
+        <select id="filter-status" class="easyui-combobox" style="width:120px;" data-options="panelHeight:'auto',editable:false">
+            <option value="">全部状态</option>
+            <option value="draft">草稿</option>
+            <option value="in-progress">进行中</option>
+            <option value="submitted">已提交</option>
+            <option value="completed">已完成</option>
+        </select>
+        <select id="filter-tr" class="easyui-combobox" style="width:120px;" data-options="panelHeight:'auto',editable:false">
+            <option value="">全部TR阶段</option>
+            <option value="TR2">TR2</option>
+            <option value="TR3">TR3</option>
+            <option value="TR4">TR4</option>
+            <option value="TR5">TR5</option>
+        </select>
+        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="doFilter()">查询</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="resetFilter()">重置</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="parent.Common.showInfo('新建项目功能（原型演示）')">新建项目</a>
+    </div>
+    <table id="dg" class="easyui-datagrid" style="width:100%;height:500px;"
+           data-options="fit:false,border:false,striped:true,rownumbers:true,pagination:true,pageSize:20,singleSelect:true,ctrlSelect:true">
+        <thead>
+        <tr>
+            <th data-options="field:'id',width:90">项目编号</th>
+            <th data-options="field:'name',width:300">项目名称</th>
+            <th data-options="field:'bg',width:60,align:'center'">BG</th>
+            <th data-options="field:'pdtl',width:140">产品线</th>
+            <th data-options="field:'tr_stage',width:70,align:'center'">TR阶段</th>
+            <th data-options="field:'is_level1',width:70,align:'center',formatter:levelFormatter">层级</th>
+            <th data-options="field:'status',width:80,align:'center',formatter:parent.Common.statusFormatter">状态</th>
+            <th data-options="field:'change_count',width:70,align:'center'">变更点</th>
+            <th data-options="field:'risk_count',width:70,align:'center'">风险项</th>
+            <th data-options="field:'completion',width:100,align:'center',formatter:progressFormatter">完成度</th>
+            <th data-options="field:'owner',width:70,align:'center'">负责人</th>
+            <th data-options="field:'created_at',width:90,align:'center'">创建日期</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+<script>
+function levelFormatter(value) {
+    return value ? '<span class="tag tag-danger">一级</span>' : '<span class="tag tag-primary">二级</span>';
+}
+function progressFormatter(value) {
+    var color = value >= 80 ? '#34a853' : (value >= 40 ? '#1a73e8' : '#fbbc04');
+    return '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<div style="flex:1;background:#e9ecef;border-radius:3px;height:6px;overflow:hidden;">' +
+        '<div style="background:' + color + ';height:100%;width:' + value + '%;border-radius:3px;"></div></div>' +
+        '<span style="font-size:11px;">' + value + '%</span></div>';
+}
+function doFilter() {
+    var bg = $('#filter-bg').combobox('getValue');
+    var status = $('#filter-status').combobox('getValue');
+    var tr = $('#filter-tr').combobox('getValue');
+    var data = MockData.get('projects');
+    if (bg) data = data.filter(function(d){ return d.bg === bg; });
+    if (status) data = data.filter(function(d){ return d.status === status; });
+    if (tr) data = data.filter(function(d){ return d.tr_stage === tr; });
+    $('#dg').datagrid('loadData', data);
+}
+function resetFilter() {
+    $('#filter-bg').combobox('setValue', '');
+    $('#filter-status').combobox('setValue', '');
+    $('#filter-tr').combobox('setValue', '');
+    $('#dg').datagrid('loadData', MockData.get('projects'));
+}
+$(function () {
+    $('#dg').datagrid('loadData', MockData.get('projects'));
+});
+</script>
+</body>
+</html>

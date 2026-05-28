@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">统计与推送</div>
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-icon blue">📋</div>
+            <div class="card-value" id="s1">0</div>
+            <div class="card-label">总项目数</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-icon red">⚠️</div>
+            <div class="card-value" id="s2">0</div>
+            <div class="card-label">高风险项</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-icon green">✅</div>
+            <div class="card-value" id="s3">0%</div>
+            <div class="card-label">基线完成率</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-icon orange">📊</div>
+            <div class="card-value" id="s4">0%</div>
+            <div class="card-label">落地完成率</div>
+        </div>
+    </div>
+
+    <div class="form-section" style="margin-top:16px;">
+        <div class="section-title">按BG统计</div>
+        <table class="five-dim-table">
+            <tr><th>BG</th><th>项目数</th><th>失效数</th><th>平均AP</th></tr>
+            <tr><td>CBG</td><td>3</td><td>3</td><td>B</td></tr>
+            <tr><td>SBG</td><td>2</td><td>1</td><td>C</td></tr>
+            <tr><td>EBG</td><td>1</td><td>1</td><td>B</td></tr>
+        </table>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">月度趋势</div>
+        <table class="five-dim-table">
+            <tr><th>月份</th><th>新增项目</th><th>新增失效</th><th>完成基线</th></tr>
+            <tr><td>2026-01</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>2026-02</td><td>1</td><td>2</td><td>1</td></tr>
+            <tr><td>2026-03</td><td>1</td><td>2</td><td>2</td></tr>
+            <tr><td>2026-04</td><td>1</td><td>1</td><td>1</td></tr>
+            <tr><td>2026-05</td><td>0</td><td>0</td><td>1</td></tr>
+        </table>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">风险/AP分布</div>
+        <div style="display:flex;gap:24px;padding:16px 0;">
+            <div style="flex:1;text-align:center;">
+                <div style="font-size:28px;font-weight:700;color:#ea4335;">3</div>
+                <div style="font-size:12px;color:#868e96;">高风险 (H)</div>
+            </div>
+            <div style="flex:1;text-align:center;">
+                <div style="font-size:28px;font-weight:700;color:#fbbc04;">5</div>
+                <div style="font-size:12px;color:#868e96;">中风险 (M)</div>
+            </div>
+            <div style="flex:1;text-align:center;">
+                <div style="font-size:28px;font-weight:700;color:#9aa0a6;">2</div>
+                <div style="font-size:12px;color:#868e96;">低风险 (L)</div>
+            </div>
+            <div style="flex:1;text-align:center;">
+                <div style="font-size:28px;font-weight:700;color:#ea4335;">3</div>
+                <div style="font-size:12px;color:#868e96;">AP=A</div>
+            </div>
+            <div style="flex:1;text-align:center;">
+                <div style="font-size:28px;font-weight:700;color:#fbbc04;">5</div>
+                <div style="font-size:12px;color:#868e96;">AP=B</div>
+            </div>
+            <div style="flex:1;text-align:center;">
+                <div style="font-size:28px;font-weight:700;color:#9aa0a6;">2</div>
+                <div style="font-size:12px;color:#868e96;">AP=C</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">推送通知</div>
+        <div style="padding:8px 0;">
+            <div style="display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f3f5;">
+                <span class="tag tag-danger" style="margin-right:10px;">紧急</span>
+                <span style="flex:1;font-size:12px;">CloudEngine S12700E 接口板串扰基线落地超期</span>
+                <span style="font-size:11px;color:#868e96;">2026-05-28</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f3f5;">
+                <span class="tag tag-warning" style="margin-right:10px;">提醒</span>
+                <span style="flex:1;font-size:12px;">AirEngine 6760-X1 DRBFM分析待启动</span>
+                <span style="font-size:11px;color:#868e96;">2026-05-27</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:8px 12px;">
+                <span class="tag tag-primary" style="margin-right:10px;">通知</span>
+                <span style="flex:1;font-size:12px;">失效分析评审已通过，请继续推进SOD评分</span>
+                <span style="font-size:11px;color:#868e96;">2026-05-25</span>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+$(function () {
+    var stats = MockData.get('statisticsData').overview;
+    $('#s1').text(stats.total_projects);
+    $('#s2').text(stats.high_risk_count);
+    $('#s3').text(stats.baseline_completion + '%');
+    $('#s4').text(stats.landing_completion + '%');
+});
+</script>
+</body>
+</html>
