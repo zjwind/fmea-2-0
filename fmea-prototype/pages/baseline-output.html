@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+    <style>
+        .summary-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .summary-card {
+            flex: 1;
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: box-shadow .2s;
+        }
+        .summary-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        .summary-card .sc-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .summary-card .sc-icon.blue { background: #e8f0fe; color: #1a73e8; }
+        .summary-card .sc-icon.green { background: #e6f4ea; color: #34a853; }
+        .summary-card .sc-icon.orange { background: #fef7e0; color: #fbbc04; }
+        .summary-card .sc-icon.red { background: #fce8e6; color: #ea4335; }
+        .summary-card .sc-icon.purple { background: #f3e8fd; color: #9334e6; }
+        .summary-card .sc-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+            line-height: 1;
+        }
+        .summary-card .sc-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+        .action-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-top: 1px solid var(--gray-200);
+            margin-top: 16px;
+        }
+        .action-bar .left-actions,
+        .action-bar .right-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .export-format-list {
+            display: flex;
+            gap: 16px;
+            padding: 16px 0;
+            justify-content: center;
+        }
+        .export-format-item {
+            width: 120px;
+            text-align: center;
+            padding: 20px 12px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .export-format-item:hover,
+        .export-format-item.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .export-format-item .ef-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        .export-format-item .ef-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">基线输出 - CloudEngine S12700E</div>
+
+    <div class="form-section" style="padding:8px 20px;">
+        <div id="step-progress"></div>
+    </div>
+
+    <div class="summary-row">
+        <div class="summary-card">
+            <div class="sc-icon blue">📋</div>
+            <div><div class="sc-value" id="sv-total">5</div><div class="sc-label">基线总数</div></div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon red">🔴</div>
+            <div><div class="sc-value" id="sv-high">3</div><div class="sc-label">高风险基线</div></div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon green">✅</div>
+            <div><div class="sc-value" id="sv-done">2</div><div class="sc-label">已落地</div></div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon orange">⏳</div>
+            <div><div class="sc-value" id="sv-partial">1</div><div class="sc-label">部分落地</div></div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon purple">📊</div>
+            <div><div class="sc-value" id="sv-ap-a">3</div><div class="sc-label">AP=A项</div></div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">DRBFM表单预览</div>
+        <table id="dg-drbfm" class="easyui-datagrid" style="width:100%;height:300px;"
+               data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true,nowrap:false">
+            <thead>
+            <tr>
+                <th data-options="field:'structure_func',width:110">项目/功能</th>
+                <th data-options="field:'failure_mode_name',width:80,align:'center'">失效模式</th>
+                <th data-options="field:'cause_desc',width:160">失效原因</th>
+                <th data-options="field:'effect_system',width:120">系统级影响</th>
+                <th data-options="field:'effect_machine',width:120">整机级影响</th>
+                <th data-options="field:'effect_customer',width:120">客户级影响</th>
+                <th data-options="field:'s',width:36,align:'center'">S</th>
+                <th data-options="field:'o',width:36,align:'center'">O</th>
+                <th data-options="field:'d',width:36,align:'center'">D</th>
+                <th data-options="field:'sop',width:50,align:'center'">SOP</th>
+                <th data-options="field:'ap',width:46,align:'center',formatter:apFormatter">AP</th>
+                <th data-options="field:'preventive_measures',width:140,formatter:measuresFormatter">预防措施</th>
+                <th data-options="field:'detection_measures',width:140,formatter:measuresFormatter">探测措施</th>
+                <th data-options="field:'optimization_measures',width:140,formatter:optFormatter">优化措施</th>
+                <th data-options="field:'s_after',width:40,align:'center',formatter:afterFormatter">S'</th>
+                <th data-options="field:'o_after',width:40,align:'center',formatter:afterFormatter">O'</th>
+                <th data-options="field:'d_after',width:40,align:'center',formatter:afterFormatter">D'</th>
+                <th data-options="field:'sop_after',width:50,align:'center',formatter:afterFormatter">SOP'</th>
+                <th data-options="field:'ap_after',width:46,align:'center',formatter:apAfterFormatter">AP'</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>基线输出列表</span>
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="openNewBaselineDialog()">新建基线</a>
+        </div>
+        <div id="baseline-cards"></div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">提交审批</div>
+        <div style="display:flex;gap:12px;padding:8px 0;">
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="submitApproval()" style="padding:6px 20px;">提交审批</a>
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-print'" onclick="openExportDialog()" style="padding:6px 20px;">导出基线报告</a>
+        </div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">
+            提交审批后，基线将进入审批流程，审批通过后方可正式发布。当前待审批基线 3 条。
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <div class="left-actions">
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-back'" onclick="parent.Common.showInfo('返回上一步（原型演示）')">上一步(失效分析)</a>
+        </div>
+        <div class="right-actions">
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-next'" onclick="parent.Common.showInfo('进入评审环节（原型演示）')" style="background:var(--primary);color:#fff;border-color:var(--primary);">下一步(评审)</a>
+        </div>
+    </div>
+</div>
+
+<div id="dlg-new-baseline" class="easyui-dialog" title="新建基线" style="width:520px;padding:20px;" data-options="closed:true,modal:true,buttons:'#dlg-new-baseline-btns'">
+    <div style="margin-bottom:14px;">
+        <div style="margin-bottom:6px;font-size:12px;font-weight:500;color:var(--gray-600);">基线名称 <span style="color:#ea4335;">*</span></div>
+        <input id="bl-name" class="easyui-textbox" style="width:100%;" data-options="prompt:'请输入基线名称'">
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:14px;">
+        <div style="flex:1;">
+            <div style="margin-bottom:6px;font-size:12px;font-weight:500;color:var(--gray-600);">分类 <span style="color:#ea4335;">*</span></div>
+            <select id="bl-category" class="easyui-combobox" style="width:100%;" data-options="panelHeight:'auto',editable:false,value:'DESIGN'">
+                <option value="DESIGN">DESIGN</option>
+                <option value="RELIABILITY">RELIABILITY</option>
+                <option value="PROCESS">PROCESS</option>
+            </select>
+        </div>
+        <div style="flex:1;">
+            <div style="margin-bottom:6px;font-size:12px;font-weight:500;color:var(--gray-600);">风险等级 <span style="color:#ea4335;">*</span></div>
+            <select id="bl-risk" class="easyui-combobox" style="width:100%;" data-options="panelHeight:'auto',editable:false,value:'H'">
+                <option value="H">H - 高风险</option>
+                <option value="M">M - 中风险</option>
+                <option value="L">L - 低风险</option>
+            </select>
+        </div>
+    </div>
+    <div style="margin-bottom:14px;">
+        <div style="margin-bottom:6px;font-size:12px;font-weight:500;color:var(--gray-600);">内容 <span style="color:#ea4335;">*</span></div>
+        <input id="bl-content" class="easyui-textbox" style="width:100%;height:100px;" data-options="multiline:true,prompt:'请输入基线内容描述'">
+    </div>
+    <div>
+        <div style="margin-bottom:6px;font-size:12px;font-weight:500;color:var(--gray-600);">负责人</div>
+        <input id="bl-owner" class="easyui-textbox" style="width:100%;" data-options="prompt:'请输入负责人姓名'">
+    </div>
+</div>
+<div id="dlg-new-baseline-btns">
+    <a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#dlg-new-baseline').dialog('close')">取消</a>
+    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="saveNewBaseline()">确定</a>
+</div>
+
+<div id="dlg-export" class="easyui-dialog" title="导出基线报告" style="width:460px;padding:20px;" data-options="closed:true,modal:true,buttons:'#dlg-export-btns'">
+    <div style="font-size:13px;color:var(--gray-700);margin-bottom:12px;">请选择导出格式：</div>
+    <div class="export-format-list">
+        <div class="export-format-item" onclick="selectExportFormat(this,'Excel')">
+            <div class="ef-icon">📊</div>
+            <div class="ef-label">Excel</div>
+        </div>
+        <div class="export-format-item" onclick="selectExportFormat(this,'PDF')">
+            <div class="ef-icon">📄</div>
+            <div class="ef-label">PDF</div>
+        </div>
+        <div class="export-format-item" onclick="selectExportFormat(this,'Word')">
+            <div class="ef-icon">📝</div>
+            <div class="ef-label">Word</div>
+        </div>
+    </div>
+    <input id="export-format" type="hidden" value="">
+</div>
+<div id="dlg-export-btns">
+    <a href="javascript:void(0)" class="easyui-linkbutton" onclick="$('#dlg-export').dialog('close')">取消</a>
+    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="doExport()">导出</a>
+</div>
+
+<script>
+var selectedExportFormat = '';
+
+function apFormatter(value) {
+    return parent.Common.apLevelFormatter(value);
+}
+
+function apAfterFormatter(value) {
+    if (!value) return '<span style="color:var(--gray-400);">-</span>';
+    return parent.Common.apLevelFormatter(value);
+}
+
+function afterFormatter(value) {
+    if (value === null || value === undefined) return '<span style="color:var(--gray-400);">-</span>';
+    return value;
+}
+
+function measuresFormatter(value) {
+    if (!value || !value.length) return '<span style="color:var(--gray-400);">-</span>';
+    return value.map(function(v) { return '<span class="tag tag-primary" style="margin:1px 2px;">' + v + '</span>'; }).join('');
+}
+
+function optFormatter(value, row) {
+    var opts = MockData.get('optimizationMeasures').filter(function(m) { return m.failure_id === row.id; });
+    if (!opts.length) return '<span style="color:var(--gray-400);">-</span>';
+    return opts.map(function(m) { return '<span class="tag tag-warning" style="margin:1px 2px;">' + m.desc + '</span>'; }).join('');
+}
+
+function buildDRBFMData() {
+    var records = MockData.get('failureRecords');
+    var ratings = MockData.get('sodRatings');
+    var ratingMap = {};
+    for (var i = 0; i < ratings.length; i++) {
+        ratingMap[ratings[i].failure_id] = ratings[i];
+    }
+    var result = [];
+    for (var j = 0; j < records.length; j++) {
+        var r = records[j];
+        var sod = ratingMap[r.id] || {};
+        var item = $.extend({}, r, {
+            structure_func: r.structure + ' / ' + r.function,
+            s: sod.s || r.severity,
+            o: sod.o || r.occurrence,
+            d: sod.d || r.detection,
+            sop: sod.sop || r.sop_before,
+            ap: sod.ap || r.ap_before,
+            s_after: sod.s_after !== undefined ? sod.s_after : null,
+            o_after: sod.o_after !== undefined ? sod.o_after : null,
+            d_after: sod.d_after !== undefined ? sod.d_after : null,
+            sop_after: sod.sop_after !== undefined ? sod.sop_after : null,
+            ap_after: sod.ap_after !== undefined ? sod.ap_after : null
+        });
+        result.push(item);
+    }
+    return result;
+}
+
+function updateSummary() {
+    var items = MockData.get('baselineItems');
+    var total = items.length;
+    var high = items.filter(function(i) { return i.risk_level === 'H'; }).length;
+    var done = items.filter(function(i) { return i.landing_status === 'done'; }).length;
+    var partial = items.filter(function(i) { return i.landing_status === 'partial'; }).length;
+    var ratings = MockData.get('sodRatings');
+    var apA = ratings.filter(function(r) { return r.ap === 'A'; }).length;
+    $('#sv-total').text(total);
+    $('#sv-high').text(high);
+    $('#sv-done').text(done);
+    $('#sv-partial').text(partial);
+    $('#sv-ap-a').text(apA);
+}
+
+function renderBaselineCards() {
+    var items = MockData.get('baselineItems');
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+        html += parent.Common.buildBaselineCard(items[i]);
+    }
+    $('#baseline-cards').html(html);
+}
+
+function openNewBaselineDialog() {
+    $('#bl-name').textbox('setValue', '');
+    $('#bl-category').combobox('setValue', 'DESIGN');
+    $('#bl-risk').combobox('setValue', 'H');
+    $('#bl-content').textbox('setValue', '');
+    $('#bl-owner').textbox('setValue', '');
+    $('#dlg-new-baseline').dialog('open');
+}
+
+function saveNewBaseline() {
+    var name = $('#bl-name').textbox('getValue');
+    var category = $('#bl-category').combobox('getValue');
+    var risk = $('#bl-risk').combobox('getValue');
+    var content = $('#bl-content').textbox('getValue');
+    var owner = $('#bl-owner').textbox('getValue');
+    if (!name || !content) {
+        parent.Common.showError('请填写必填项（基线名称、内容）');
+        return;
+    }
+    var items = MockData.get('baselineItems');
+    items.push({
+        id: 'BL' + String(items.length + 1).padStart(3, '0'),
+        project_id: 'P2026001',
+        name: name,
+        category: category,
+        content: content,
+        risk_level: risk,
+        landing_status: 'pending',
+        landing_progress: 0,
+        created_at: parent.Common.getToday(),
+        owner: owner || '张三'
+    });
+    $('#dlg-new-baseline').dialog('close');
+    renderBaselineCards();
+    updateSummary();
+    parent.Common.showNotification('新建成功', '基线「' + name + '」已创建', 'success');
+}
+
+function submitApproval() {
+    parent.Common.showConfirm('确认提交审批？提交后将进入审批流程，审批通过后方可正式发布基线。', function() {
+        parent.Common.showNotification('提交成功', '基线审批已提交，等待审批人审核', 'success');
+    });
+}
+
+function selectExportFormat(el, format) {
+    $(el).siblings().removeClass('selected');
+    $(el).addClass('selected');
+    selectedExportFormat = format;
+    $('#export-format').val(format);
+}
+
+function openExportDialog() {
+    selectedExportFormat = '';
+    $('#export-format').val('');
+    $('.export-format-item').removeClass('selected');
+    $('#dlg-export').dialog('open');
+}
+
+function doExport() {
+    if (!selectedExportFormat) {
+        parent.Common.showError('请选择导出格式');
+        return;
+    }
+    $('#dlg-export').dialog('close');
+    parent.Common.showNotification('导出中', '正在生成' + selectedExportFormat + '格式基线报告...', 'info');
+    setTimeout(function() {
+        parent.Common.showNotification('导出完成', '基线报告已生成（' + selectedExportFormat + '格式）', 'success');
+    }, 1500);
+}
+
+$(function () {
+    var steps = [
+        { name: '结构分析' },
+        { name: '功能分析' },
+        { name: '失效分析' },
+        { name: '基线输出' },
+        { name: '评审' },
+        { name: '审批' },
+        { name: '完成' }
+    ];
+    $('#step-progress').html(parent.Common.buildStepProgress(steps, 3));
+
+    $('#dg-drbfm').datagrid('loadData', buildDRBFMData());
+
+    renderBaselineCards();
+    updateSummary();
+});
+</script>
+</body>
+</html>

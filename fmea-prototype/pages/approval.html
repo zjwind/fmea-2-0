@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+    <style>
+        .approval-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px 24px;
+        }
+        .approval-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .approval-info-item .info-label {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-bottom: 2px;
+        }
+        .approval-info-item .info-value {
+            font-size: 13px;
+            color: var(--gray-800);
+            font-weight: 500;
+        }
+        .timeline {
+            position: relative;
+            padding: 4px 0 4px 28px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--gray-300);
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -22px;
+            top: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid var(--gray-300);
+            background: #fff;
+            z-index: 1;
+        }
+        .timeline-dot.done {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        .timeline-dot.done::after {
+            content: '✓';
+            color: #fff;
+            font-size: 9px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .timeline-dot.current {
+            background: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(26,115,232,.15);
+        }
+        .timeline-dot.rejected {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+        .timeline-dot.rejected::after {
+            content: '✕';
+            color: #fff;
+            font-size: 9px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .timeline-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        .timeline-title.pending-text {
+            color: var(--gray-500);
+        }
+        .timeline-desc {
+            font-size: 11px;
+            color: var(--gray-600);
+            margin-top: 2px;
+        }
+        .opinion-display {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            font-size: 12px;
+            color: var(--gray-700);
+            line-height: 1.6;
+            min-height: 40px;
+        }
+        .approval-form .radio-group {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 12px;
+        }
+        .approval-form .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--gray-700);
+            cursor: pointer;
+        }
+        .approval-form .radio-group input[type="radio"] {
+            accent-color: var(--primary);
+        }
+        .approval-form textarea {
+            width: 100%;
+            min-height: 80px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            padding: 8px 12px;
+            font-size: 12px;
+            font-family: var(--font-family);
+            resize: vertical;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .approval-form textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(26,115,232,.15);
+        }
+        .linked-review-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .linked-review-table th,
+        .linked-review-table td {
+            border: 1px solid var(--gray-300);
+            padding: 6px 10px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .linked-review-table th {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+        .linked-review-table td {
+            background: #fff;
+        }
+        .detail-toolbar {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--gray-200);
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">审批管理</div>
+    <div class="toolbar">
+        <span class="toolbar-title">审批列表</span>
+    </div>
+    <table id="dg" class="easyui-datagrid" style="width:100%;height:240px;"
+           data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true,pagination:true,pageSize:10,pageList:[10,20,50],onSelect:onSelect">
+        <thead>
+        <tr>
+            <th data-options="field:'id',width:80">审批编号</th>
+            <th data-options="field:'project_id',width:90">项目编号</th>
+            <th data-options="field:'type',width:180">审批类型</th>
+            <th data-options="field:'applicant',width:70,align:'center'">申请人</th>
+            <th data-options="field:'approver',width:70,align:'center'">审批人</th>
+            <th data-options="field:'status',width:80,align:'center',formatter:parent.Common.statusFormatter">状态</th>
+            <th data-options="field:'opinion',width:200">审批意见</th>
+            <th data-options="field:'created_at',width:90,align:'center'">申请日期</th>
+            <th data-options="field:'approved_at',width:90,align:'center'">审批日期</th>
+        </tr>
+        </thead>
+    </table>
+
+    <div id="detail-panel" style="margin-top:16px;display:none;">
+        <div class="form-section">
+            <div class="section-title">审批信息</div>
+            <div id="approval-info" class="approval-info-grid"></div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-title">审批状态</div>
+            <div id="approval-timeline" class="timeline"></div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-title">审批意见</div>
+            <div id="approval-opinion-display" class="opinion-display"></div>
+        </div>
+
+        <div id="linked-review-panel" class="form-section" style="display:none;">
+            <div class="section-title">关联评审</div>
+            <div id="linked-review-content"></div>
+        </div>
+
+        <div class="detail-toolbar">
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="openApprovalDialog()">审批</a>
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="showLinkedReview()">查看关联评审</a>
+        </div>
+    </div>
+</div>
+
+<div id="approval-dlg" style="display:none;">
+    <div style="padding:20px;">
+        <div class="approval-form">
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px;color:var(--gray-600);font-weight:500;display:block;margin-bottom:6px;">审批决定</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="approval-decision" value="agree"> 同意</label>
+                    <label><input type="radio" name="approval-decision" value="reject"> 驳回</label>
+                    <label><input type="radio" name="approval-decision" value="return"> 退回修改</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>审批意见</label>
+                <textarea id="approval-opinion-input" placeholder="请输入审批意见..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentApproval = null;
+
+function onSelect(index, row) {
+    currentApproval = row;
+    $('#detail-panel').show();
+    $('#linked-review-panel').hide();
+
+    var statusMap = { 'approved': '已审批', 'pending': '待审批', 'rejected': '已驳回', 'draft': '草稿' };
+
+    $('#approval-info').html(
+        '<div class="approval-info-item"><span class="info-label">审批编号</span><span class="info-value">' + row.id + '</span></div>' +
+        '<div class="approval-info-item"><span class="info-label">审批类型</span><span class="info-value">' + row.type + '</span></div>' +
+        '<div class="approval-info-item"><span class="info-label">审批状态</span><span class="info-value">' + parent.Common.statusFormatter(row.status) + '</span></div>' +
+        '<div class="approval-info-item"><span class="info-label">申请人</span><span class="info-value">' + row.applicant + '</span></div>' +
+        '<div class="approval-info-item"><span class="info-label">审批人</span><span class="info-value">' + row.approver + '</span></div>' +
+        '<div class="approval-info-item"><span class="info-label">项目编号</span><span class="info-value">' + row.project_id + '</span></div>' +
+        '<div class="approval-info-item"><span class="info-label">申请时间</span><span class="info-value">' + row.created_at + '</span></div>' +
+        '<div class="approval-info-item"><span class="info-label">审批时间</span><span class="info-value">' + (row.approved_at || '—') + '</span></div>'
+    );
+
+    buildTimeline(row);
+
+    if (row.opinion) {
+        $('#approval-opinion-display').html(row.opinion);
+    } else {
+        $('#approval-opinion-display').html('<span style="color:var(--gray-500);">暂无审批意见</span>');
+    }
+}
+
+function buildTimeline(row) {
+    var html = '';
+    var steps = [
+        { name: '草稿', desc: '审批申请已创建', done: true },
+        { name: '已提交', desc: '审批申请已提交至审批人', done: row.status !== 'draft' },
+        { name: '已审批', desc: '', done: row.status === 'approved' || row.status === 'rejected' }
+    ];
+
+    if (row.status === 'approved') {
+        steps[2].desc = '审批通过 · ' + (row.approved_at || '');
+    } else if (row.status === 'rejected') {
+        steps[2].desc = '审批驳回 · ' + (row.approved_at || '');
+    } else {
+        steps[2].desc = '等待审批人处理';
+    }
+
+    for (var i = 0; i < steps.length; i++) {
+        var step = steps[i];
+        var dotCls = '';
+        if (step.done && i < steps.length - 1) {
+            dotCls = 'done';
+        } else if (step.done && i === steps.length - 1) {
+            if (row.status === 'rejected') {
+                dotCls = 'rejected';
+            } else {
+                dotCls = 'done';
+            }
+        } else if (!step.done && i > 0 && steps[i - 1].done) {
+            dotCls = 'current';
+        }
+
+        var titleCls = step.done ? '' : 'pending-text';
+
+        html += '<div class="timeline-item">';
+        html += '<div class="timeline-dot ' + dotCls + '"></div>';
+        html += '<div class="timeline-title ' + titleCls + '">' + step.name + '</div>';
+        html += '<div class="timeline-desc">' + step.desc + '</div>';
+        html += '</div>';
+    }
+
+    $('#approval-timeline').html(html);
+}
+
+function openApprovalDialog() {
+    if (!currentApproval) {
+        parent.Common.showInfo('请先选择一条审批记录');
+        return;
+    }
+    if (currentApproval.status === 'approved' || currentApproval.status === 'rejected') {
+        parent.Common.showInfo('该审批已处理，无法重复审批');
+        return;
+    }
+
+    $('input[name="approval-decision"]').prop('checked', false);
+    $('#approval-opinion-input').val('');
+
+    var suggestions = {
+        'DRBFM触发评估审批': '同意触发DRBFM分析，评估依据充分，请按流程执行。',
+        '结构分析评审审批': '评审流程规范，结论合理，同意审批。',
+        '基线输出审批': '基线内容完整，建议审批通过后跟踪落地执行情况。',
+        '失效分析评审审批': '失效分析全面，措施可行，同意审批。',
+        'SOD评分评审审批': 'SOD评分合理，AP等级判定准确，同意审批。'
+    };
+    var suggestion = suggestions[currentApproval.type] || '同意审批。';
+    $('#approval-opinion-input').val(suggestion);
+
+    $('#approval-dlg').dialog({
+        title: '审批操作',
+        width: 480,
+        modal: true,
+        closed: false,
+        buttons: [{
+            text: '确认',
+            iconCls: 'icon-ok',
+            handler: function () {
+                var decision = $('input[name="approval-decision"]:checked').val();
+                if (!decision) {
+                    parent.Common.showInfo('请选择审批决定');
+                    return;
+                }
+                var opinion = $('#approval-opinion-input').val();
+                if (!opinion.trim()) {
+                    parent.Common.showInfo('请填写审批意见');
+                    return;
+                }
+                var decisionText = { agree: '同意', reject: '驳回', return: '退回修改' };
+                parent.Common.showNotification('审批操作', '审批决定：' + decisionText[decision], 'success');
+                $('#approval-dlg').dialog('close');
+            }
+        }, {
+            text: '取消',
+            handler: function () {
+                $('#approval-dlg').dialog('close');
+            }
+        }]
+    });
+}
+
+function showLinkedReview() {
+    if (!currentApproval) {
+        parent.Common.showInfo('请先选择一条审批记录');
+        return;
+    }
+
+    var reviewData = MockData.get('reviewData');
+    var linked = [];
+    for (var i = 0; i < reviewData.length; i++) {
+        if (reviewData[i].project_id === currentApproval.project_id) {
+            linked.push(reviewData[i]);
+        }
+    }
+
+    if (linked.length === 0) {
+        $('#linked-review-content').html('<div style="color:var(--gray-500);font-size:12px;padding:8px 0;">暂无关联评审记录</div>');
+    } else {
+        var html = '<table class="linked-review-table">';
+        html += '<tr><th>评审编号</th><th>评审类型</th><th>状态</th><th>评审结论</th><th>评审日期</th></tr>';
+        for (var j = 0; j < linked.length; j++) {
+            var r = linked[j];
+            html += '<tr>';
+            html += '<td>' + r.id + '</td>';
+            html += '<td>' + r.type + '</td>';
+            html += '<td>' + parent.Common.statusFormatter(r.status) + '</td>';
+            html += '<td>' + (r.result || '—') + '</td>';
+            html += '<td>' + r.created_at + '</td>';
+            html += '</tr>';
+        }
+        html += '</table>';
+        $('#linked-review-content').html(html);
+    }
+
+    $('#linked-review-panel').toggle();
+}
+
+$(function () {
+    var data = MockData.get('approvalData');
+    $('#dg').datagrid('loadData', { total: data.length, rows: data });
+    if (data.length > 0) $('#dg').datagrid('selectRow', 0);
+});
+</script>
+</body>
+</html>
