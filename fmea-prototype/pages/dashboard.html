@@ -68,15 +68,15 @@
             </div>
             <div style="display:flex;gap:24px;padding:16px 0;">
                 <div style="flex:1;text-align:center;">
-                    <div style="font-size:36px;font-weight:700;color:#ea4335;" id="risk-H">0</div>
+                    <div style="font-size:36px;font-weight:700;color:#ef4444;" id="risk-H">0</div>
                     <div style="font-size:12px;color:#868e96;margin-top:4px;">高风险 (AP=A)</div>
                 </div>
                 <div style="flex:1;text-align:center;">
-                    <div style="font-size:36px;font-weight:700;color:#fbbc04;" id="risk-M">0</div>
+                    <div style="font-size:36px;font-weight:700;color:#f59e0b;" id="risk-M">0</div>
                     <div style="font-size:12px;color:#868e96;margin-top:4px;">中风险 (AP=B)</div>
                 </div>
                 <div style="flex:1;text-align:center;">
-                    <div style="font-size:36px;font-weight:700;color:#9aa0a6;" id="risk-L">0</div>
+                    <div style="font-size:36px;font-weight:700;color:#9ca3af;" id="risk-L">0</div>
                     <div style="font-size:12px;color:#868e96;margin-top:4px;">低风险 (AP=C)</div>
                 </div>
             </div>
@@ -111,7 +111,7 @@
 
 <script>
 function progressFormatter(value) {
-    var color = value >= 80 ? '#34a853' : (value >= 40 ? '#1a73e8' : '#fbbc04');
+    var color = value >= 80 ? '#22c55e' : (value >= 40 ? '#4f6ef7' : '#f59e0b');
     return '<div style="display:flex;align-items:center;gap:8px;">' +
         '<div style="flex:1;background:#e9ecef;border-radius:4px;height:8px;overflow:hidden;">' +
         '<div style="background:' + color + ';height:100%;width:' + value + '%;border-radius:4px;"></div></div>' +
