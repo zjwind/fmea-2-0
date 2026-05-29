@@ -181,9 +181,9 @@
     <h2>五、风险综合评分计算</h2>
     <p>五维评分完成后，系统按以下公式计算风险综合评分：</p>
     <div class="formula-box">
-        风险综合评分 = 技术新颖性 × 15% + 影响范围 × 30% + 失效严重度 × 30% + 变更复杂度 × 20% + 历史问题 × 5%
+        风险综合评分(1-12分) = 技术新颖性 × 15% + 影响范围 × 30% + 失效严重度 × 30% + 变更复杂度 × 20% + 历史问题 × 5%
     </div>
-    <p>其中，各维度得分按上述"高组→中组→低组"优先级规则确定（10分/5分/1分/0分），综合评分结果保留两位小数。</p>
+    <p>其中，各维度得分按上述"高组→中组→低组"优先级规则确定（10分/5分/1分/0分），加权求和后按比例映射至1-12分范围，综合评分结果保留一位小数。</p>
 
     <h3>评分示例</h3>
     <table>
@@ -206,7 +206,7 @@
             <td>历史问题</td><td>无"是"</td><td>有"是"</td><td>—</td><td><span class="risk-m">5</span></td><td>5%</td><td>0.25</td>
         </tr>
         <tr>
-            <td colspan="5" style="text-align:right;font-weight:700;">风险综合评分</td><td colspan="2" style="font-weight:700;font-size:16px;color:#c62828;">6.45</td>
+            <td colspan="5" style="text-align:right;font-weight:700;">风险综合评分(1-12分)</td><td colspan="2" style="font-weight:700;font-size:16px;color:#c62828;">7.7</td>
         </tr>
     </table>
 
@@ -219,7 +219,7 @@
     </table>
 
     <div class="highlight">
-        <p><strong>注意：</strong>系统自动填充"DRBFM触发评估建议"和"最终DRBFM触发结论"，默认结论与风险等级一致。PSE和TSE复核时可手动修改最终结论。</p>
+        <p><strong>注意：</strong>系统自动填充"DRBFM触发评估建议"和"最终DRBFM触发结论"，默认结论与风险等级一致。PSE和TSE复核时可手动修改最终结论。如拒绝系统建议，需在"拒绝建议理由"列填写理由。</p>
     </div>
 
     <h2>七、评估表结构图</h2>
