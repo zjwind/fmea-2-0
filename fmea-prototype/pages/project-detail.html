@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">项目详情 - CloudEngine S12700E系列交换机DRBFM分析</div>
+
+    <div class="form-section">
+        <div class="section-title">基本信息</div>
+        <div class="form-row">
+            <div class="form-group"><label>项目编号</label><div class="form-value">P2026001</div></div>
+            <div class="form-group"><label>所属BG</label><div class="form-value">CBG</div></div>
+            <div class="form-group"><label>产品线</label><div class="form-value">数据中心交换机产品线</div></div>
+            <div class="form-group"><label>TR阶段</label><div class="form-value">TR4</div></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>项目层级</label><div class="form-value"><span class="tag tag-danger">一级项目</span></div></div>
+            <div class="form-group"><label>状态</label><div class="form-value"><span class="badge badge-in-progress">进行中</span></div></div>
+            <div class="form-group"><label>负责人</label><div class="form-value">张三</div></div>
+            <div class="form-group"><label>创建日期</label><div class="form-value">2026-01-15</div></div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">质量保证计划</div>
+        <div class="form-row">
+            <div class="form-group"><label>计划名称</label><div class="form-value">CloudEngine S12700E质量保证计划</div></div>
+            <div class="form-group"><label>计划状态</label><div class="form-value"><span class="badge badge-approved">已批准</span></div></div>
+        </div>
+        <div style="margin-top:8px;">
+            <label style="font-size:12px;color:#868e96;font-weight:500;">质量目标</label>
+            <ul style="margin:6px 0;padding-left:18px;font-size:12px;color:#495057;line-height:1.8;">
+                <li>确保400GE接口板卡信号完整性满足IEEE 802.3bs标准</li>
+                <li>主控板ARM A72架构切换后系统稳定性不低于99.999%</li>
+                <li>散热系统满足55°C环境温度运行要求</li>
+                <li>电源模块3000W输出纹波≤1%</li>
+            </ul>
+        </div>
+        <div style="margin-top:8px;">
+            <label style="font-size:12px;color:#868e96;font-weight:500;">团队</label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+                <span class="tag tag-primary">张三 - TSE/项目经理</span>
+                <span class="tag">李四 - 硬件设计工程师</span>
+                <span class="tag">王五 - 可靠性工程师</span>
+                <span class="tag">赵六 - 测试工程师</span>
+                <span class="tag">孙七 - 工艺工程师</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">变更清单</div>
+        <ul id="change-tree" class="easyui-tree" data-options="animate:true,lines:true" style="height:auto;"></ul>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title">历史问题</div>
+        <table id="dg-history" class="easyui-datagrid" style="width:100%;height:200px;"
+               data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true">
+            <thead>
+            <tr>
+                <th data-options="field:'project',width:140">来源项目</th>
+                <th data-options="field:'failure_mode',width:160">失效模式</th>
+                <th data-options="field:'cause',width:260">原因</th>
+                <th data-options="field:'severity',width:60,align:'center',formatter:parent.Common.riskLevelFormatter">严重度</th>
+                <th data-options="field:'occurred_at',width:90,align:'center'">发生日期</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+<script>
+$(function () {
+    var changeTreeData = [
+        { text: 'CloudEngine S12700E整机系统 <span class="tag tag-danger" style="margin-left:6px;">新增</span> <span class="tag tag-primary" style="margin-left:4px;">必选</span>', state:'open', children: [
+            { text: '主控板子系统 <span class="tag" style="margin-left:6px;">修改</span> - 主控板CPU升级至ARM A72架构', children: [
+                { text: '主控板PCB <span class="tag" style="margin-left:6px;">修改</span> - PCB层数从12层增加到16层' },
+                { text: '主控板散热模组 <span class="tag" style="margin-left:6px;">修改</span> - 散热片尺寸增大20%' }
+            ]},
+            { text: '交换网板子系统 <span class="tag" style="margin-left:6px;">修改</span> - 交换芯片带宽升级至25.6Tbps', children: [
+                { text: '交换芯片 <span class="tag tag-danger" style="margin-left:6px;">新增</span> - 采用新一代SDN交换芯片' }
+            ]},
+            { text: '接口板子系统 <span class="tag tag-danger" style="margin-left:6px;">新增</span> <span class="tag" style="margin-left:4px;">可选</span> - 新增400GE QSFP-DD接口板' }
+        ]},
+        { text: '电源子系统 <span class="tag" style="margin-left:6px;">修改</span> - 电源模块从1500W升级至3000W', children: [
+            { text: 'AC电源模块 <span class="tag" style="margin-left:6px;">修改</span> - 功率密度提升，散热结构重新设计' }
+        ]}
+    ];
+    $('#change-tree').tree('loadData', changeTreeData);
+    $('#dg-history').datagrid('loadData', MockData.get('historyIssues'));
+});
+</script>
+</body>
+</html>

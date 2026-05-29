@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-icon blue">📋</div>
+            <div class="card-value" id="stat-projects">0</div>
+            <div class="card-label">活跃项目</div>
+            <div class="card-trend up">▲ 较上月 +2</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-icon red">⚠️</div>
+            <div class="card-value" id="stat-high-risk">0</div>
+            <div class="card-label">高风险项</div>
+            <div class="card-trend down">▲ 较上月 +1</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-icon green">✅</div>
+            <div class="card-value" id="stat-baseline">0%</div>
+            <div class="card-label">基线完成率</div>
+            <div class="card-trend up">▲ 较上月 +12%</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-icon orange">📊</div>
+            <div class="card-value" id="stat-landing">0%</div>
+            <div class="card-label">落地完成率</div>
+            <div class="card-trend up">▲ 较上月 +8%</div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid" style="padding-top:0;">
+        <div class="dashboard-card dashboard-wide">
+            <div class="section-header">
+                <div class="section-title">项目进展概览</div>
+            </div>
+            <table id="dg-projects" class="easyui-datagrid" style="width:100%;height:260px;"
+                   data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true">
+                <thead>
+                <tr>
+                    <th data-options="field:'id',width:90">项目编号</th>
+                    <th data-options="field:'name',width:280">项目名称</th>
+                    <th data-options="field:'bg',width:60">BG</th>
+                    <th data-options="field:'tr_stage',width:70,align:'center'">TR阶段</th>
+                    <th data-options="field:'status',width:80,align:'center',formatter:parent.Common.statusFormatter">状态</th>
+                    <th data-options="field:'completion',width:120,align:'center',formatter:progressFormatter">完成度</th>
+                    <th data-options="field:'owner',width:70,align:'center'">负责人</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+
+        <div class="dashboard-card dashboard-wide">
+            <div class="section-header">
+                <div class="section-title">风险分布</div>
+            </div>
+            <div style="display:flex;gap:24px;padding:16px 0;">
+                <div style="flex:1;text-align:center;">
+                    <div style="font-size:36px;font-weight:700;color:#ea4335;" id="risk-H">0</div>
+                    <div style="font-size:12px;color:#868e96;margin-top:4px;">高风险 (AP=A)</div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                    <div style="font-size:36px;font-weight:700;color:#fbbc04;" id="risk-M">0</div>
+                    <div style="font-size:12px;color:#868e96;margin-top:4px;">中风险 (AP=B)</div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                    <div style="font-size:36px;font-weight:700;color:#9aa0a6;" id="risk-L">0</div>
+                    <div style="font-size:12px;color:#868e96;margin-top:4px;">低风险 (AP=C)</div>
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <div class="section-title" style="font-size:13px;margin-bottom:8px;">失效记录TOP5</div>
+                <table id="dg-failures" class="easyui-datagrid" style="width:100%;height:180px;"
+                       data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true">
+                    <thead>
+                    <tr>
+                        <th data-options="field:'structure',width:100">结构</th>
+                        <th data-options="field:'failure_mode_name',width:90,align:'center'">失效类型</th>
+                        <th data-options="field:'cause_desc',width:220">原因描述</th>
+                        <th data-options="field:'ap_before',width:60,align:'center',formatter:parent.Common.apLevelFormatter">AP</th>
+                        <th data-options="field:'status',width:70,align:'center',formatter:parent.Common.statusFormatter">状态</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid" style="padding-top:0;">
+        <div class="dashboard-card dashboard-full">
+            <div class="section-header">
+                <div class="section-title">待办事项</div>
+            </div>
+            <div id="todo-list" style="padding:8px 0;"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function progressFormatter(value) {
+    var color = value >= 80 ? '#34a853' : (value >= 40 ? '#1a73e8' : '#fbbc04');
+    return '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="flex:1;background:#e9ecef;border-radius:4px;height:8px;overflow:hidden;">' +
+        '<div style="background:' + color + ';height:100%;width:' + value + '%;border-radius:4px;"></div></div>' +
+        '<span style="font-size:11px;color:#495057;min-width:36px;">' + value + '%</span></div>';
+}
+
+$(function () {
+    var stats = MockData.get('statisticsData').overview;
+    $('#stat-projects').text(stats.active_projects);
+    $('#stat-high-risk').text(stats.high_risk_count);
+    $('#stat-baseline').text(stats.baseline_completion + '%');
+    $('#stat-landing').text(stats.landing_completion + '%');
+
+    var riskDist = MockData.get('statisticsData').risk_distribution;
+    $('#risk-H').text(riskDist.H);
+    $('#risk-M').text(riskDist.M);
+    $('#risk-L').text(riskDist.L);
+
+    var projects = MockData.get('projects');
+    $('#dg-projects').datagrid('loadData', projects);
+
+    var failures = MockData.get('failureRecords');
+    $('#dg-failures').datagrid('loadData', failures);
+
+    var todos = [
+        { text: 'CloudEngine S12700E - SOD评分待完成', type: 'warning', time: '2026-05-28' },
+        { text: '接口板串扰控制基线待落地', type: 'danger', time: '2026-05-28' },
+        { text: 'AirEngine 6760-X1结构分析待启动', type: 'info', time: '2026-05-27' },
+        { text: '失效分析评审 - 刘工待评审', type: 'warning', time: '2026-05-27' },
+        { text: '基线输出审批待马总审批', type: 'info', time: '2026-05-26' }
+    ];
+    var todoHtml = '';
+    for (var i = 0; i < todos.length; i++) {
+        var t = todos[i];
+        var tagCls = t.type === 'danger' ? 'tag-danger' : (t.type === 'warning' ? 'tag-warning' : 'tag-primary');
+        todoHtml += '<div style="display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f3f5;">' +
+            '<span class="tag ' + tagCls + '" style="margin-right:10px;">待办</span>' +
+            '<span style="flex:1;font-size:12px;">' + t.text + '</span>' +
+            '<span style="font-size:11px;color:#868e96;">' + t.time + '</span></div>';
+    }
+    $('#todo-list').html(todoHtml);
+});
+</script>
+</body>
+</html>

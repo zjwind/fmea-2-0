@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">结构分析 - CloudEngine S12700E</div>
+    <div style="display:flex;gap:16px;">
+        <div style="flex:1;">
+            <div class="form-section">
+                <div class="section-title">结构分解树</div>
+                <ul id="struct-tree" class="easyui-tree" data-options="animate:true,lines:true" style="height:auto;max-height:500px;overflow:auto;"></ul>
+            </div>
+        </div>
+        <div style="flex:1;">
+            <div class="form-section">
+                <div class="section-title">结构关系图</div>
+                <div id="relation-table" style="overflow:auto;"></div>
+            </div>
+            <div class="form-section">
+                <div class="section-title">结构详情</div>
+                <div id="struct-detail" style="padding:8px;">
+                    <div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">请在左侧选择结构节点查看详情</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+$(function () {
+    var nodes = MockData.get('structureNodes');
+    var edges = MockData.get('structureEdges');
+    var treeData = buildTreeData(nodes, null);
+    $('#struct-tree').tree({
+        data: treeData,
+        onClick: function(node) {
+            var n = MockData.findById(nodes, node.id);
+            if (!n) return;
+            var relEdges = edges.filter(function(e){ return e.source === n.id || e.target === n.id; });
+            var html = '<ul class="info-list">';
+            html += '<li><span class="info-label">节点ID</span><span class="info-value">' + n.id + '</span></li>';
+            html += '<li><span class="info-label">名称</span><span class="info-value">' + n.name + '</span></li>';
+            html += '<li><span class="info-label">类型</span><span class="info-value"><span class="tag tag-primary">' + n.type + '</span></span></li>';
+            html += '<li><span class="info-label">关联关系</span><span class="info-value">' + (relEdges.length > 0 ? relEdges.map(function(e){ return e.relation; }).join('、') : '无') + '</span></li>';
+            html += '</ul>';
+            $('#struct-detail').html(html);
+        }
+    });
+
+    var edgeHtml = '<table class="five-dim-table"><tr><th>源节点</th><th>关系</th><th>目标节点</th></tr>';
+    for (var i = 0; i < edges.length; i++) {
+        var e = edges[i];
+        var src = findByIdName(nodes, e.source);
+        var tgt = findByIdName(nodes, e.target);
+        edgeHtml += '<tr><td>' + src + '</td><td>' + e.relation + '</td><td>' + tgt + '</td></tr>';
+    }
+    edgeHtml += '</table>';
+    $('#relation-table').html(edgeHtml);
+
+    function buildTreeData(nodes, parentId) {
+        var result = [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].parent_id === parentId) {
+                var item = { id: nodes[i].id, text: nodes[i].name + ' <span class="tag tag-primary" style="margin-left:4px;">' + nodes[i].type + '</span>' };
+                var children = buildTreeData(nodes, nodes[i].id);
+                if (children.length > 0) {
+                    item.children = children;
+                    item.state = 'open';
+                }
+                result.push(item);
+            }
+        }
+        return result;
+    }
+
+    function findByIdName(nodes, id) {
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].id === id) return nodes[i].name;
+        }
+        return id;
+    }
+});
+</script>
+</body>
+</html>

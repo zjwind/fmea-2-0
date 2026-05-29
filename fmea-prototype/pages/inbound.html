@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">入库管理</div>
+    <div class="toolbar">
+        <span class="toolbar-title">待入库基线</span>
+        <a href="javascript:void(0)" class="easyui-linkbutton" onclick="parent.Common.showInfo('批量入库（原型演示）')">批量入库</a>
+    </div>
+    <table id="dg" class="easyui-datagrid" style="width:100%;height:350px;"
+           data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true,checkbox:true">
+        <thead>
+        <tr>
+            <th data-options="field:'ck',checkbox:true"></th>
+            <th data-options="field:'id',width:80">基线编号</th>
+            <th data-options="field:'name',width:280">基线名称</th>
+            <th data-options="field:'category',width:80,align:'center'">分类</th>
+            <th data-options="field:'risk_level',width:70,align:'center',formatter:parent.Common.riskLevelFormatter">风险等级</th>
+            <th data-options="field:'landing_status',width:80,align:'center',formatter:landingFormatter">落地状态</th>
+            <th data-options="field:'owner',width:70,align:'center'">负责人</th>
+            <th data-options="field:'created_at',width:90,align:'center'">创建日期</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+<script>
+function landingFormatter(value) {
+    var map = { done: '<span class="landing-status landing-done">已落地</span>', partial: '<span class="landing-status landing-partial">部分落地</span>', pending: '<span class="landing-status landing-pending">未落地</span>' };
+    return map[value] || '-';
+}
+$(function () {
+    $('#dg').datagrid('loadData', MockData.get('baselineItems'));
+});
+</script>
+</body>
+</html>

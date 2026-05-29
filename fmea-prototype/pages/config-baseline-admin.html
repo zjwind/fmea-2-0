@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="page-container">
+    <div class="page-title">基线库管理员</div>
+    <div class="toolbar">
+        <span class="toolbar-title">管理员列表</span>
+        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="parent.Common.showInfo('新增管理员（原型演示）')">新增</a>
+    </div>
+    <table id="dg" class="easyui-datagrid" style="width:100%;height:350px;"
+           data-options="fit:false,border:false,striped:true,rownumbers:true,singleSelect:true">
+        <thead>
+        <tr>
+            <th data-options="field:'id',width:80">编号</th>
+            <th data-options="field:'name',width:100,align:'center'">姓名</th>
+            <th data-options="field:'domain',width:200">负责领域</th>
+            <th data-options="field:'role',width:100,align:'center',formatter:roleFormatter">角色</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+<script>
+function roleFormatter(value) {
+    return value === '管理员' ? '<span class="badge badge-approved">管理员</span>' : '<span class="badge badge-draft">审核员</span>';
+}
+$(function () {
+    $('#dg').datagrid('loadData', MockData.get('systemConfig').baseline_admins);
+});
+</script>
+</body>
+</html>
