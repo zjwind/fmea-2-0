@@ -85,6 +85,7 @@
 | 事务管理 | Provider持有@Transactional，Service不加事务注解 |
 | 跨模块调用 | Provider可跨模块调用Service，Service仅调用本模块Mapper |
 | 数据源 | FMEA主库(默认) + PMS只读库(@DS("pms")) |
+| 健康检查与监控 | 集成Spring Boot Actuator，暴露/actuator/health和/actuator/metrics端点，用于系统健康检查和性能指标监控 |
 
 ---
 
@@ -632,7 +633,7 @@ public class PmsQueryServiceImpl implements PmsQueryService {
 | 3006006 | AI SOD评分建议失败 | AiService调用超时或异常 |
 | 3007001 | AI临时数据不存在 | 采纳AI结果时临时表无数据 |
 | 3007002 | AI临时数据已采纳 | 重复采纳同一AI生成结果 |
-| 3008001 | 飞书画板导出失败 | 画板导出图片/PDF异常 |
+| 3008001 | 飞书画板导出失败 | 画板导出图片异常 |
 | 3008002 | FMEA表单导出失败 | Excel导出异常 |
 | 3009001 | SOD评分值超出范围 | S/O/D值不在1-10范围 |
 | 3009002 | AP参考表数据缺失 | SOD组合在AP参考表中无对应记录 |
@@ -2302,7 +2303,7 @@ com.fmea.analysis/
 | 回读画板数据 | POST | /analysis/structure/sync/{taskId} | JSON |
 | 从评估表生成框图 | POST | /analysis/structure/generate-from-eval/{taskId} | JSON |
 | 导入历史框图 | POST | /analysis/structure/import-history/{taskId} | multipart |
-| 导出框图图片 | GET | /analysis/structure/export-image/{taskId} | binary |
+| 导出框图图片（仅PNG格式） | GET | /analysis/structure/export-image/{taskId} | binary |
 | 功能分析页 | GET | /analysis/function/{taskId} | FTL视图 |
 | 获取功能矩阵 | GET | /analysis/function/matrix/{taskId} | JSON |
 | AI补充功能 | POST | /analysis/function/ai-supplement/{taskId} | JSON(异步) |
@@ -2589,7 +2590,7 @@ POST /analysis/structure/import-history/{taskId}
 
 ---
 
-##### 12. 导出框图图片
+##### 12. 导出框图图片（仅PNG格式）
 
 ```
 GET /analysis/structure/export-image/{taskId}
@@ -2601,13 +2602,7 @@ GET /analysis/structure/export-image/{taskId}
 |------|------|------|
 | taskId | Long | 分析任务ID |
 
-**请求参数**：
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| format | String | 否 | 导出格式，默认png，可选png/pdf |
-
-**响应**：`byte[]`（二进制流，Content-Type: image/png 或 application/pdf）
+**响应**：`byte[]`（二进制流，Content-Type: image/png）
 
 ---
 
@@ -3206,7 +3201,7 @@ public interface AnalysisProvider {
 
     String aiGenerateDetectionMeasure(Long taskId);
 
-    void adoptAiResult(Long analysisTaskId, String generationType, List<Long> tempIds);
+    void adoptAiResult(Long analysisTaskId, String generationType, List<Long> tempIds);  // @AuditLog(action = "ADOPT_AI_RESULT", resourceType = "ANALYSIS")
 
     void saveFailureAnalysis(Long taskId, FailureAnalysisSaveRequest request);
 
@@ -3214,7 +3209,7 @@ public interface AnalysisProvider {
 
     void saveSodRating(SodRatingSaveRequest request);
 
-    void nextStep(Long taskId);
+    void nextStep(Long taskId);  // @AuditLog(action = "NEXT_STEP", resourceType = "ANALYSIS")
 
     AiTaskStatusVO getAiTaskStatus(String aiTaskId);
 }
@@ -3316,6 +3311,20 @@ public interface AnalysisProvider {
 | 业务规则 | 1. 校验任务状态为structure；2. 校验画板已创建；3. 从EvaluationService读取变更点清单层级关系；4. 按层级构造树结构节点信息；5. 以Mermaid语法生成初图；6. 调用LarkService写入画板；7. 同步回读节点和边数据 |
 | 集成服务 | LarkService.updateBoardContent()、LarkService.getBoardContent() |
 
+**变更点清单→结构框图映射规则**：
+- ID结构：10 → 10.1 → 10.1.1（无限层级）
+- 映射规则：每个ID对应一个节点，节点名称取系统名/部件名称
+- 层级关系：ID的"."分隔层级决定父子关系
+  - 10 → 顶级节点（系统级）
+  - 10.1 → 10的子节点
+  - 10.1.1 → 10.1的子节点
+- Mermaid生成规则：
+  - 使用graph TD（自顶向下）
+  - 顶级节点用subgraph包裹
+  - 每个节点格式：ID前缀[系统名/部件名]
+  - 边：父子关系用 --> 连接
+  - 风险标记：H=红色样式、M=黄色样式、L=灰色样式
+
 ---
 
 ##### importHistoryDiagram
@@ -3337,7 +3346,7 @@ public interface AnalysisProvider {
 | 方法签名 | `byte[] exportBoardImage(Long taskId)` |
 | 调用的Service | StructureDiagramService |
 | 事务 | 无（只读操作） |
-| 业务规则 | 1. 校验画板已创建；2. 调用LarkService导出画板为图片 |
+| 业务规则 | 1. 校验画板已创建；2. 调用LarkService导出画板为PNG图片（仅支持PNG格式） |
 | 集成服务 | LarkService.exportBoardAsImage() |
 
 ---
@@ -3481,7 +3490,7 @@ public interface AnalysisProvider {
 | 方法签名 | `void adoptAiResult(Long analysisTaskId, String generationType, List<Long> tempIds)` |
 | 调用的Service | AiGenerationTempService、FailureModeService、FailureCauseService、FailureEffectService、PreventiveMeasureService、DetectionMeasureService、OptimizationMeasureService |
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
-| 业务规则 | 1. 校验临时记录属于该分析任务且类型匹配；2. 根据generationType将临时数据复制到对应正式业务表；3. 标记临时记录is_adopted=1；4. 更新AI采纳率统计 |
+| 业务规则 | 1. 校验临时记录属于该分析任务且类型匹配；2. 根据generationType将临时数据复制到对应正式业务表；3. 标记临时记录is_adopted=1；4. 更新AI采纳率统计。采纳复制逻辑：将临时表记录的所有业务字段复制到正式业务表，ID字段赋值为NULL（由正式表自增生成本文ID），临时表记录标记adopted=true。复制后正式表记录与临时表记录无外键关联 |
 | 集成服务 | 无 |
 
 ---
@@ -4434,11 +4443,11 @@ public enum EffectLevel {
 
 | 规则 | 说明 |
 |------|------|
-| 生成前删除 | 每次AI生成时，先执行 `DELETE FROM fmea_ai_generation_temp WHERE analysis_task_id=? AND generation_type=?` |
+| 生成前删除 | 每次AI生成时，先执行 `DELETE FROM fmea_ai_generation_temp WHERE analysis_task_id=? AND generation_type=? AND is_adopted=0`，仅删除未采纳的临时数据 |
 | 插入新数据 | 删除后插入本次AI生成的新数据 |
 | 采纳标记 | 用户采纳后，`is_adopted`字段更新为1，数据同时复制到正式业务表 |
 | 无自动清理 | 临时表不设置自动过期清理，每个分析任务对应一份临时数据 |
-| 重新生成 | 用户点击"重新生成"时，重复"删除旧数据→调用AI→插入新数据"流程 |
+| 重新生成 | 用户点击"重新生成"时，仅删除该分析任务对应类型的未采纳临时数据（adopted=false），已采纳的数据（adopted=true）不受影响，然后调用AI→插入新数据 |
 | 采纳率统计 | 采纳后更新`fmea_ai_adoption_stat`表，记录total_count/adopted_count/adoption_rate |
 
 ---
@@ -4468,6 +4477,8 @@ public enum EffectLevel {
 | 3004xxx | 失效分析 | 失效模式/原因/影响/措施相关 |
 | 3005xxx | AI生成 | AI异步任务相关 |
 | 3006xxx | SOD评分 | SOD评分、AP参考表相关 |
+
+**错误码策略**：业务异常使用BusinessException携带错误码，系统异常和参数校验异常使用统一错误码（9990001系统异常、9990002参数校验失败）。各模块仅定义核心业务错误码（每个模块5-10个），非核心异常使用通用错误码。
 
 **错误响应格式**：
 
@@ -5103,7 +5114,7 @@ public interface EvaluationProvider {
 
     void autoMatch(Long taskId);
 
-    void submitEvaluation(EvaluationSubmitRequest request);
+    void submitEvaluation(EvaluationSubmitRequest request);  // @AuditLog(action = "SUBMIT_EVALUATION", resourceType = "EVALUATION")
 
     void withdrawEvaluation(Long taskId);
 
@@ -5117,11 +5128,11 @@ public interface EvaluationProvider {
 
     void calculateRiskScore(Long itemId);
 
-    void confirmEvaluation(Long taskId);
+    void confirmEvaluation(Long taskId);  // @AuditLog(action = "CONFIRM_EVALUATION", resourceType = "EVALUATION")
 
     void assignCollaborator(CollaboratorAssignRequest request);
 
-    void mergeEvaluation(Long taskId);
+    void mergeEvaluation(Long taskId);  // @AuditLog(action = "MERGE_EVALUATION", resourceType = "EVALUATION")
 }
 ```
 
@@ -5161,7 +5172,7 @@ public interface EvaluationProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `ChangeListService.importAndParse()`, `QualityPlanService.getByTaskId()`(只读), `ChangeListService.autoMatchWithQualityPlan()` |
-| 业务规则 | 1. 校验评估任务存在（否则抛`2001001`）；2. 解析Excel文件，按LEVEL列解析无限层级结构（详见5.7.1）；3. 重复导入时先删除该任务关联的所有`fmea_change_list_item`记录再写入新数据；4. 若质量策划已导入，自动触发匹配更新`qualityMatch`字段；5. 解析失败抛`2002001`，格式不正确抛`2002002` |
+| 业务规则 | 1. 校验评估任务存在（否则抛`2001001`）；2. 解析Excel文件，按LEVEL列解析无限层级结构（详见5.7.1）；3. 重复导入时先删除该任务关联的所有`fmea_change_list_item`记录再写入新数据；4. 设置`has_change_list=true`；5. 若质量策划已导入（`has_quality_plan=true`），自动触发匹配更新`qualityMatch`字段；6. 解析失败抛`2002001`，格式不正确抛`2002002` |
 
 ---
 
@@ -5181,7 +5192,7 @@ public interface EvaluationProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `QualityPlanService.importAndProcess()`, `AiService.processQualityPlan()`, `ChangeListItemService.listByTaskId()`(只读), `ChangeListService.autoMatchWithQualityPlan()` |
-| 业务规则 | 1. 读取Excel各Sheet内容转Markdown；2. 调用`AiService.processQualityPlan()`提取"风险小类+风险策划指南"；3. 暂存至`fmea_quality_plan`表；4. 若变更点清单已导入，自动触发匹配；5. 导入失败抛`2003001` |
+| 业务规则 | 1. 读取Excel各Sheet内容转Markdown；2. 调用`AiService.processQualityPlan()`提取"风险小类+风险策划指南"；3. 暂存至`fmea_quality_plan`表；4. 设置`has_quality_plan=true`；5. 若变更点清单已导入（`has_change_list=true`），自动触发匹配；6. 导入失败抛`2003001` |
 
 ---
 
@@ -5333,6 +5344,13 @@ public interface EvaluationTaskService {
 | confirm | `EvaluationTaskMapper.updateById()` | 更新状态为confirmed |
 | existsSystemLevelTask | `EvaluationTaskMapper.selectCount()` | 检查项目是否已有系统级评估任务 |
 
+**EvaluationTask Entity新增字段**：
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| has_change_list | BIT | 0 | 是否已导入变更清单 |
+| has_quality_plan | BIT | 0 | 是否已导入质量策划 |
+
 ---
 
 #### 5.5.2 EvaluationItemService
@@ -5354,6 +5372,18 @@ public interface EvaluationItemService {
 | calculateRiskScore | `EvaluationItemMapper.updateById()` | 计算并更新风险评分 |
 | checkAllLevel0Completed | `EvaluationItemMapper.selectCount()` | 检查LEVEL=0评估项是否全部完成 |
 | mergeComponentEvaluation | `EvaluationItemMapper.selectList()`, `EvaluationItemMapper.insert()`, `EvaluationItemMapper.updateById()` | 部件级评估合并 |
+
+**EvaluationItem Entity五维字段修改**：
+
+原字段（DECIMAL类型存储得分）改为_option_id（存储选项ID）+ _score（存储计算后分数）双字段：
+
+| 原字段 | 新字段1 | 新字段2 | 说明 |
+|--------|---------|---------|------|
+| tech_novelty DECIMAL(5,2) | tech_novelty_option_id BIGINT | tech_novelty_score INT | 技术新颖性：选项ID+计算后分数 |
+| impact_scope DECIMAL(5,2) | impact_scope_option_id BIGINT | impact_scope_score INT | 影响范围：选项ID+计算后分数 |
+| severity DECIMAL(5,2) | severity_option_id BIGINT | severity_score INT | 失效严重度：选项ID+计算后分数 |
+| change_complexity DECIMAL(5,2) | change_complexity_option_id BIGINT | change_complexity_score INT | 变更复杂度：选项ID+计算后分数 |
+| history_issue DECIMAL(5,2) | history_issue_option_id BIGINT | history_issue_score INT | 历史问题：选项ID+计算后分数 |
 
 ---
 
@@ -5551,24 +5581,15 @@ public enum EvaluationStatus {
 
 #### 5.7.2 质量策划导入顺序处理
 
-**三种场景**：
+**三种导入顺序场景的统一处理逻辑**：
 
 | 场景 | 导入顺序 | 处理逻辑 |
 |------|----------|----------|
-| 场景一 | 先导入变更清单 → 再导入质量策划 | 变更清单直接写入`fmea_change_list_item`表并更新线上表格；质量策划导入后系统自动读取线上变更点清单进行匹配，将匹配结果更新至`qualityMatch`字段 |
-| 场景二 | 先导入质量策划 → 再导入变更清单 | 质量策划导入后仅暂存至`fmea_quality_plan`表，不触发匹配；变更清单导入后系统自动读取`fmea_quality_plan`暂存内容与变更点清单匹配更新 |
-| 场景三 | 手动点击"自动匹配" | 系统读取线上`fmea_change_list_item`表和`fmea_quality_plan`表的内容，执行匹配逻辑并更新`qualityMatch`字段 |
+| 场景1 | 先导入变更清单，再导入质量策划 | `importChangeList`：导入变更清单数据到fmea_change_list_item，设置has_change_list=true；`importQualityPlan`：导入质量策划数据，检测到has_change_list=true，自动触发匹配更新；结果：变更清单+质量策划匹配后数据 |
+| 场景2 | 先导入质量策划，再导入变更清单 | `importQualityPlan`：导入质量策划数据到fmea_quality_plan，设置has_quality_plan=true；`importChangeList`：导入变更清单数据，检测到has_quality_plan=true，自动触发匹配更新；结果：变更清单+质量策划匹配后数据 |
+| 场景3 | 都已导入，点击自动匹配 | `autoMatch`：读取线上变更清单+质量策划，执行匹配更新；结果：重新匹配更新 |
 
-**实现要点**：`importChangeList`和`importQualityPlan`方法末尾均检查对方数据是否已存在，若存在则自动触发匹配。
-
-**统一判断入口规则**：
-- 导入变更清单时，检查是否已有质量策划数据（fmea_quality_plan）
-  - 如有：自动触发匹配更新（调用autoMatch逻辑）
-  - 如无：仅导入变更清单数据
-- 导入质量策划时，检查是否已有变更清单数据（fmea_change_list_item）
-  - 如有：自动触发匹配更新（调用autoMatch逻辑）
-  - 如无：仅暂存质量策划数据
-- 点击自动匹配：读取线上变更清单+质量策划，执行匹配更新
+**判断依据**：fmea_evaluation_task表增加has_change_list(BIT)和has_quality_plan(BIT)字段
 
 ---
 
@@ -5603,15 +5624,17 @@ public enum EvaluationStatus {
 | 低组 | 2个选项 | 高组和中组均无"是"，低组任一选中"是" | 取低分 |
 | — | — | 三组均无"是" | 0分 |
 
+**每个维度的评分规则**：高组任一选项选中→10分；中组任一选项选中→5分；低组任一选项选中→3分；均未选→0分。高组优先：高组有选中则取10分，不再看中/低组。
+
 **各维度满分值与分组分值**：
 
 | 维度 | 权重 | 高分 | 中分 | 低分 |
 |------|------|------|------|------|
-| 技术新颖性（tech_novelty） | 15% | 10 | 6 | 3 |
-| 影响范围（impact_scope） | 30% | 10 | 6 | 3 |
-| 失效严重度（severity） | 30% | 10 | 6 | 3 |
-| 变更复杂度（change_complexity） | 20% | 10 | 6 | 3 |
-| 历史问题（history_issue） | 5% | 10 | 6 | 3 |
+| 技术新颖性（tech_novelty） | 15% | 10 | 5 | 3 |
+| 影响范围（impact_scope） | 30% | 10 | 5 | 3 |
+| 失效严重度（severity） | 30% | 10 | 5 | 3 |
+| 变更复杂度（change_complexity） | 20% | 10 | 5 | 3 |
+| 历史问题（history_issue） | 5% | 10 | 5 | 3 |
 
 **计算伪代码**：
 
@@ -5782,13 +5805,15 @@ com.fmea.baseline
 │   ├── BaselineItemMapper.java
 │   ├── LandingTaskMapper.java
 │   ├── LandingItemMapper.java
-│   └── LandingAuditMapper.java
+│   ├── LandingAuditMapper.java
+│   └── LandingDeferredHistoryMapper.java
 ├── entity
 │   ├── Baseline.java
 │   ├── BaselineItem.java
 │   ├── LandingTask.java
 │   ├── LandingItem.java
-│   └── LandingAudit.java
+│   ├── LandingAudit.java
+│   └── LandingDeferredHistory.java
 ├── dto
 │   ├── request
 │   │   ├── BaselineSaveRequest.java
@@ -6068,13 +6093,13 @@ public interface BaselineProvider {
 
     void deduplicateMeasures(Long baselineId, List<Long> measureIds);
 
-    void submitBaseline(Long baselineId);
+    void submitBaseline(Long baselineId);  // @AuditLog(action = "SUBMIT_BASELINE", resourceType = "BASELINE")
 
     PageResult<LandingTaskVO> queryLandingPage(int page, int rows, String projectId);
 
     void fillLandingItem(LandingFillRequest request);
 
-    void auditLandingItem(LandingAuditRequest request);
+    void auditLandingItem(LandingAuditRequest request);  // @AuditLog(action = "AUDIT_LANDING_ITEM", resourceType = "LANDING")
 }
 ```
 
@@ -6085,6 +6110,36 @@ public interface BaselineProvider {
 | 事务 | 无（只读查询） |
 | 调用Service | `BaselineService.getByAnalysisTaskId()`, `BaselineItemService.listByBaselineId()`, `AnalysisService.getById()`(只读) |
 | 业务规则 | 1. 根据分析任务ID查询基线数据；2. 若基线不存在，按默认模式一自动生成基线清单；3. 从失效分析结果提取预防措施、探测措施、优化措施 |
+
+**基线输出措施合并查询逻辑**：
+1. 分别查询fmea_preventive_measure、fmea_detection_measure、fmea_optimization_measure三张表
+2. 统一映射为BaselineMeasureVO（通用措施VO）：
+   - id：原表ID
+   - measureType：preventive/detection/optimization
+   - description：措施描述
+   - sourceType：AI_GENERATED/HISTORY
+   - changeType：NEW/OPTIMIZED
+   - isLanding：是否落地
+   - landingOwner：落地负责人
+   - landingDeadline：落地时间
+3. 三表结果合并为一个List\<BaselineMeasureVO\>
+4. 按measureType排序（preventive→detection→optimization），同类型内按创建时间排序
+
+**BaselineMeasureVO DTO定义**：
+
+```java
+public class BaselineMeasureVO {
+    private Long id;
+    private String measureType;     // preventive/detection/optimization
+    private String description;
+    private String sourceType;      // AI_GENERATED/HISTORY
+    private String changeType;      // NEW/OPTIMIZED
+    private Boolean isLanding;
+    private String landingOwner;
+    private LocalDateTime landingDeadline;
+    private LocalDateTime createdTime;
+}
+```
 
 ---
 
@@ -6114,7 +6169,7 @@ public interface BaselineProvider {
 |------|------|
 | 事务 | `@Transactional(rollbackFor = Exception.class)` |
 | 调用Service | `BaselineItemService.removeByIds()` |
-| 业务规则 | 1. 物理删除选中的重复措施；2. 删除后更新基线项排序 |
+| 业务规则 | 去重逻辑：系统不自动判断重复，由工程师人工识别重复措施后，通过删除操作移除。deduplicateMeasures方法接收待删除的措施ID列表，执行逻辑删除（is_deleted=1） |
 
 ---
 
@@ -6279,7 +6334,7 @@ public interface LandingAuditService {
 | `FILLED` | 已填报 | 负责人已填报 |
 | `COMPLETED` | 已完成 | 审核通过且落地完成 |
 | `DEFERRED` | 已延期 | 审核通过延期，重置为待填报 |
-| `FAILED` | 试验失败 | 审核通过试验失败，触发重新分析 |
+| `FAILED` | 试验失败 | 审核通过试验失败/无法落地，预留重新分析接口 |
 
 **状态转换表**：
 
@@ -6288,11 +6343,11 @@ public interface LandingAuditService {
 | `PENDING` | fill | `FILLED` | 负责人填报落地情况 |
 | `FILLED` | audit(pass) + landingResult=completed | `COMPLETED` | 审核通过，落地完成 |
 | `FILLED` | audit(pass) + landingResult=deferred | `PENDING` | 审核通过延期，更新负责人/时间，重置为待填报 |
-| `FILLED` | audit(pass) + landingResult=failed | `FAILED` | 审核通过试验失败，触发重新分析 |
-| `FILLED` | audit(pass) + landingResult=cannot_land | `FAILED` | 审核通过无法落地，触发重新分析 |
+| `FILLED` | audit(pass) + landingResult=failed | `FAILED` | 审核通过试验失败，预留重新分析接口（具体触发方式待后续确认），当前仅记录状态和原因 |
+| `FILLED` | audit(pass) + landingResult=cannot_land | `FAILED` | 审核通过无法落地，预留重新分析接口（具体触发方式待后续确认），当前仅记录状态和原因 |
 | `FILLED` | audit(reject) | `PENDING` | 审核不通过，通知负责人重新处理 |
 | `COMPLETED` | — | — | 终态，写入措施库和失效库 |
-| `FAILED` | — | — | 终态，触发重新分析 |
+| `FAILED` | — | — | 预留重新分析接口，当前仅记录状态和原因 |
 
 **状态机实现**：
 
@@ -6410,11 +6465,36 @@ public enum LandingStatus {
 | 落地情况 | 审核通过后动作 | 状态变更 | 数据操作 |
 |----------|---------------|----------|----------|
 | 完成 | 回写基线落地表+写入措施库和失效库 | `FILLED` → `COMPLETED` | 1. 更新`BaselineItem.landingStatus=completed`；2. 调用`LibraryService.writeMeasureLibrary()`写入措施库；3. 调用`LibraryService.writeFailureLibrary()`写入失效库 |
-| 延期 | 更新负责人和落地时间，重置为待填报 | `FILLED` → `PENDING` | 1. 更新`LandingItem.landingOwner=newOwner`；2. 更新`LandingItem.landingDate=newDate`；3. 重置`landingResult`为空 |
-| 试验失败 | 触发重新分析流程 | `FILLED` → `FAILED` | 1. 更新`LandingItem.landingStatus=failed`；2. 通知分析任务负责人；3. 标记关联分析任务需重新分析 |
-| 无法落地 | 触发重新分析流程 | `FILLED` → `FAILED` | 1. 更新`LandingItem.landingStatus=failed`；2. 通知分析任务负责人；3. 标记关联分析任务需重新分析 |
+| 延期 | 更新负责人和落地时间，重置为待填报 | `FILLED` → `PENDING` | 1. 写入延期历史记录（fmea_landing_deferred_history）；2. 递增`LandingItem.deferred_count`；3. 更新`LandingItem.landingOwner=newOwner`；4. 更新`LandingItem.landingDate=newDate`；5. 重置`landingResult`为空 |
+| 试验失败 | 预留重新分析接口（具体触发方式待后续确认），当前仅记录状态和原因 | `FILLED` → `FAILED` | 1. 更新`LandingItem.landingStatus=failed`；2. 记录失败原因 |
+| 无法落地 | 预留重新分析接口（具体触发方式待后续确认），当前仅记录状态和原因 | `FILLED` → `FAILED` | 1. 更新`LandingItem.landingStatus=failed`；2. 记录无法落地原因 |
 
 **审核不通过**：落地项状态重置为`PENDING`，通知负责人重新处理，无重试次数限制。
+
+---
+
+#### 6.7.6 延期历史设计
+
+**fmea_landing_deferred_history（延期历史表）**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | BIGINT IDENTITY(1,1) PRIMARY KEY | 主键 |
+| landing_item_id | BIGINT NOT NULL | 关联fmea_landing_item.id |
+| original_owner | NVARCHAR(100) | 原负责人 |
+| new_owner | NVARCHAR(100) | 新负责人 |
+| original_deadline | DATETIME2 | 原截止时间 |
+| new_deadline | DATETIME2 | 新截止时间 |
+| defer_reason | NVARCHAR(500) | 延期原因 |
+| deferred_by | NVARCHAR(100) | 操作人 |
+| deferred_time | DATETIME2 DEFAULT GETDATE() | 操作时间 |
+| is_deleted | BIT DEFAULT 0 | 逻辑删除 |
+
+**fmea_landing_item新增字段**：
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| deferred_count | INT | 0 | 延期次数 |
 
 ---
 
@@ -6809,7 +6889,7 @@ com.fmea.review
 ```java
 public interface ReviewProvider {
 
-    void initiateReview(ReviewInitiateRequest request);
+    void initiateReview(ReviewInitiateRequest request);  // @AuditLog(action = "INITIATE_REVIEW", resourceType = "REVIEW")
 
     ReviewDetailVO getReviewDetail(Long reviewId);
 
@@ -6817,7 +6897,7 @@ public interface ReviewProvider {
 
     void respondOpinion(OpinionRespondRequest request);
 
-    void closeOpinion(Long opinionId);
+    void closeOpinion(Long opinionId);  // @AuditLog(action = "CLOSE_OPINION", resourceType = "REVIEW")
 
     void uploadMeetingMinutes(Long reviewId, String content);
 
@@ -6825,9 +6905,9 @@ public interface ReviewProvider {
 
     void processReviewNotifications();
 
-    void initiateApproval(ApprovalInitiateRequest request);
+    void initiateApproval(ApprovalInitiateRequest request);  // @AuditLog(action = "INITIATE_APPROVAL", resourceType = "APPROVAL")
 
-    void processApproval(ApprovalProcessRequest request);
+    void processApproval(ApprovalProcessRequest request);  // @AuditLog(action = "PROCESS_APPROVAL", resourceType = "APPROVAL")
 }
 ```
 
@@ -7063,6 +7143,7 @@ public interface ApprovalService {
 |--------|--------|------|
 | `INITIATED` | 已发起 | 评审刚创建，等待评审人提交意见 |
 | `REVIEWING` | 评审中 | 有评审人开始提交意见 |
+| `MEETING` | 线下会议 | 意见率<2/3时转入线下会议 |
 | `OPINION_CLOSED` | 意见已闭环 | 所有评审意见已闭环 |
 | `MINUTES_GENERATED` | 纪要已生成 | AI评审纪要已生成 |
 | `COMPLETED` | 已完成 | 评审完成，可发起审批 |
@@ -7072,9 +7153,13 @@ public interface ApprovalService {
 | 当前状态 | 触发动作 | 目标状态 | 校验条件 |
 |----------|----------|----------|----------|
 | `INITIATED` | 首个评审人提交意见 | `REVIEWING` | — |
+| `REVIEWING` | 意见率<2/3 | `MEETING` | 1级项目意见率未达到2/3 |
+| `MEETING` | 上传会议纪要 | `OPINION_CLOSED` | 会议纪要内容非空 |
 | `REVIEWING` | 所有意见闭环 | `OPINION_CLOSED` | 所有`ReviewOpinion.isClosed=true` |
 | `OPINION_CLOSED` | AI生成纪要 | `MINUTES_GENERATED` | 所有意见已闭环 |
 | `MINUTES_GENERATED` | 负责人确认纪要 | `COMPLETED` | 纪要内容非空 |
+
+**线下会议流程说明**：系统无法跟踪会议过程，仅跟踪会议结果。负责人组织线下会议后，上传会议纪要文本，系统记录纪要内容和上传时间。
 
 **状态机实现**：
 
@@ -7082,6 +7167,7 @@ public interface ApprovalService {
 public enum ReviewStatus {
     INITIATED("initiated"),
     REVIEWING("reviewing"),
+    MEETING("meeting"),
     OPINION_CLOSED("opinion_closed"),
     MINUTES_GENERATED("minutes_generated"),
     COMPLETED("completed");
@@ -7100,7 +7186,8 @@ public enum ReviewStatus {
 
     static {
         ALLOWED_TRANSITIONS.put(INITIATED, Set.of(REVIEWING.code));
-        ALLOWED_TRANSITIONS.put(REVIEWING, Set.of(OPINION_CLOSED.code));
+        ALLOWED_TRANSITIONS.put(REVIEWING, Set.of(MEETING.code, OPINION_CLOSED.code));
+        ALLOWED_TRANSITIONS.put(MEETING, Set.of(OPINION_CLOSED.code));
         ALLOWED_TRANSITIONS.put(OPINION_CLOSED, Set.of(MINUTES_GENERATED.code));
         ALLOWED_TRANSITIONS.put(MINUTES_GENERATED, Set.of(COMPLETED.code));
         ALLOWED_TRANSITIONS.put(COMPLETED, Collections.emptySet());
@@ -7696,9 +7783,9 @@ public interface InboundProvider {
 
     void applyInbound(Long baselineId);
 
-    void processInboundApproval(InboundApprovalRequest request);
+    void processInboundApproval(InboundApprovalRequest request);  // @AuditLog(action = "PROCESS_INBOUND_APPROVAL", resourceType = "INBOUND")
 
-    void editLibraryItem(LibraryEditRequest request);
+    void editLibraryItem(LibraryEditRequest request);  // @AuditLog(action = "EDIT_LIBRARY_ITEM", resourceType = "INBOUND")
 }
 ```
 
@@ -7741,6 +7828,12 @@ public class InboundProviderImpl implements InboundProvider {
         }
         if (!"completed".equals(baseline.getApprovalStatus())) {
             throw new BusinessException(8001002, "基线未完成审批，不可申请入库");
+        }
+        // 校验：查询fmea_approval_inbound表，如存在status='rejected'的记录，抛出8001009错误
+        InboundApproval existingApproval = inboundApprovalService
+                .getRejectedByBaselineId(baselineId);
+        if (existingApproval != null) {
+            throw new BusinessException(8001009, "入库申请已被拒绝，不允许重新申请入库");
         }
 
         BaselineLibrary library = baselineLibraryService
@@ -8181,6 +8274,16 @@ public class MeasureLibraryServiceImpl implements MeasureLibraryService {
 
 基线输出数据入库时，需将分析阶段的业务字段映射为基线库字段：
 
+**入库字段映射规则（一期：按原字段映射）**：
+- fmea_preventive_measure → fmea_measure_library（measure_type='preventive'）
+- fmea_detection_measure → fmea_measure_library（measure_type='detection'）
+- fmea_optimization_measure → fmea_measure_library（measure_type='optimization'）
+- fmea_failure_mode → fmea_failure_library
+- 映射方式：源字段名与目标字段名相同的直接映射，目标表额外字段置空
+- 后续迭代：通过配置表定义字段映射规则，支持自定义映射
+
+**预留接口**：InboundMappingService.convertToLibrary(sourceType, sourceId)
+
 | 基线输出源字段 | 入库目标表 | 入库目标字段 | 映射规则 |
 |----------------|-----------|-------------|----------|
 | baseline.bg | fmea_baseline_library | bg | 直接映射 |
@@ -8253,6 +8356,7 @@ public enum InboundApprovalConclusion {
 | 8001006 | 入库申请重复提交 | 同一基线不可重复申请入库 |
 | 8001007 | 入库后编辑审批未通过，数据已回滚 | 重新编辑后再次提交 |
 | 8001008 | 入库字段映射失败，源数据不完整 | 检查基线输出数据完整性 |
+| 8001009 | 入库申请已被拒绝，不允许重新申请 | 审批不通过后不允许重新申请入库 |
 
 ---
 
@@ -9601,6 +9705,7 @@ public class DashboardProviderImpl implements DashboardProvider {
 
     @Override
     public void sendQuarterlyReport() {
+        // 定时调度暂不配置，后续引入xxl-job统一调度。当前仅实现Service方法，由调度框架触发调用。
         List<RankingItemVO> baselineCallRanking =
                 dashboardStatService.getBaselineCallRanking(null, 20);
         String adminUserId = configProvider.getLibraryAdmin();
@@ -9639,6 +9744,7 @@ public class DashboardProviderImpl implements DashboardProvider {
 
     @Override
     public void sendTrNodeReport(String projectId) {
+        // 定时调度暂不配置，后续引入xxl-job统一调度。当前仅实现Service方法，由调度框架触发调用。
         ProjectProgressVO project =
                 dashboardStatService.getProjectProgressById(projectId);
         List<RankingItemVO> measureRanking =
@@ -9889,9 +9995,9 @@ public class ExcelExporter {
 }
 ```
 
-#### 11.7.2 飞书API导出图片/PDF
+#### 11.7.2 飞书API导出图片
 
-结构框图导出使用飞书API：
+结构框图导出使用飞书API（仅PNG格式）：
 
 ```java
 @Service
@@ -9946,7 +10052,7 @@ public class ExportServiceImpl implements ExportService {
 |----------|----------|----------|------|
 | 变更点清单 | .xlsx | 代码内置 | 标准列定义 |
 | 评估表 | .xlsx | 代码内置 | 五维评估+风险评分 |
-| 结构框图 | .png/.pdf | 飞书API | 从飞书画板导出 |
+| 结构框图 | .png | 飞书API | 从飞书画板导出（仅PNG格式） |
 | 功能矩阵 | .xlsx | 代码内置 | 功能×结构矩阵 |
 | FMEA表单 | .xlsx | 代码内置 | 失效模式+原因+影响+措施+SOD |
 | 基线落地计划 | .xlsx | 代码内置 | 措施清单+负责人+时间 |
