@@ -156,7 +156,7 @@ var steps = [
 {name:'提交审核'},
 {name:'历史问题导入'},
 {name:'五维风险评估'},
-{name:'风险综合评分'},
+{name:'风险综合评分(1-12分)'},
 {name:'评估确认'}
 ];
 var currentStep = 0;
@@ -459,9 +459,9 @@ return h;
 
 function buildStepScore(){
 var h = '<div class="step-panel">';
-h += '<div class="section-title">风险综合评分</div>';
+h += '<div class="section-title">风险综合评分(1-12分)</div>';
 h += '<div class="score-formula">';
-h += '风险综合评分 = 技术新颖性<span class="hl">×15%</span> + 影响范围<span class="hl">×30%</span> + 失效严重度<span class="hl">×30%</span> + 变更复杂度<span class="hl">×20%</span> + 历史问题<span class="hl">×5%</span>';
+h += '风险综合评分(1-12分) = 技术新颖性<span class="hl">×15%</span> + 影响范围<span class="hl">×30%</span> + 失效严重度<span class="hl">×30%</span> + 变更复杂度<span class="hl">×20%</span> + 历史问题<span class="hl">×5%</span>';
 h += '</div>';
 h += '<div class="info-box info-box-yellow" style="margin-bottom:12px">风险等级：<span style="color:var(--danger);font-weight:700">H（≥8分）</span> | <span style="color:#856404;font-weight:700">M（5~8分）</span> | <span style="color:var(--gray-500);font-weight:700">L（<5分）</span></div>';
 h += '<div id="scoreResultArea"></div>';
@@ -767,7 +767,7 @@ h += '<div class="score-row"><span class="label">'+dims[d].name+'：</span><span
 }
 h += '<div class="score-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-200)"><span class="label" style="font-weight:700">综合评分：</span><span class="value" style="font-size:18px;color:var(--primary)">'+r.score+'</span></div>';
 h += '<div class="conclusion-row"><span class="label">DRBFM触发评估建议：</span><span style="font-weight:700">'+getRiskLabel(level)+'</span></div>';
-h += '<div class="conclusion-row"><span class="label">建议理由：</span>';
+h += '<div class="conclusion-row"><span class="label">理由及建议分析重点：</span>';
 h += '<select class="easyui-combobox" name="reason_'+item.id+'" style="width:320px" data-options="editable:false,panelHeight:\'auto\'">';
 h += '<option value="score_map">分数映射预定义理由</option>';
 h += '<option value="ai_gen">AI动态生成</option>';
@@ -778,6 +778,7 @@ h += '<option value="H"'+(level==='H'?' selected':'')+'>H - 必须进行DRBFM分
 h += '<option value="M"'+(level==='M'?' selected':'')+'>M - 建议进行DRBFM分析</option>';
 h += '<option value="L"'+(level==='L'?' selected':'')+'>L - 可以不进行DRBFM分析</option>';
 h += '</select></div>';
+h += '<div class="conclusion-row"><span class="label">拒绝建议理由：</span><input type="text" name="reject_'+item.id+'" style="width:320px;border:1px solid #ddd;border-radius:4px;padding:4px 8px" placeholder="如拒绝系统建议，请填写理由"></div>';
 h += '</div></div>';
 }
 $('#scoreResultArea').html(h);

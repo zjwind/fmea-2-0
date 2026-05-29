@@ -201,9 +201,10 @@ function buildHeaderRow1() {
         h += '<th class="dim-header" colspan="7">' + dims[d].name + '(' + dims[d].weightLabel + ')</th>';
     }
     h += '<th class="score-col-header score-start" colspan="5" style="top:0">各维度得分</th>';
-    var resultHeaders = ['风险综合评分', '风险等级', 'DRBFM触发评估建议', '建议理由', '最终DRBFM触发结论'];
+    var resultHeaders = ['风险综合评分(1-12分)', '风险等级', 'DRBFM触发评估建议', '理由及建议分析重点', '最终DRBFM触发结论', '拒绝建议理由'];
+    var resultWidths = [100, 55, 110, 130, 110, 110];
     for (var r = 0; r < resultHeaders.length; r++) {
-        h += '<th class="result-col-header' + (r === 0 ? ' result-start' : '') + '" rowspan="3" style="top:0;min-width:' + (r === 0 ? 70 : r === 1 ? 55 : 100) + 'px">' + resultHeaders[r] + '</th>';
+        h += '<th class="result-col-header' + (r === 0 ? ' result-start' : '') + '" rowspan="3" style="top:0;min-width:' + resultWidths[r] + 'px">' + resultHeaders[r] + '</th>';
     }
     h += '</tr>';
     return h;
@@ -272,6 +273,7 @@ function buildDataRow(row, rowIdx) {
         h += '<td class="result-cell" id="sg_' + row.id + '"></td>';
         h += '<td class="result-cell" id="rs_' + row.id + '"></td>';
         h += '<td class="result-cell" id="cl_' + row.id + '"></td>';
+        h += '<td class="result-cell" id="rj_' + row.id + '"></td>';
     } else {
         var totalOptCols = 0;
         var optIdx = 0;
@@ -287,6 +289,7 @@ function buildDataRow(row, rowIdx) {
         }
         for (var d = 0; d < dims.length; d++) h += '<td class="score-cell' + (d === 0 ? ' score-start' : '') + '"></td>';
         h += '<td class="result-cell result-start"></td>';
+        h += '<td class="result-cell"></td>';
         h += '<td class="result-cell"></td>';
         h += '<td class="result-cell"></td>';
         h += '<td class="result-cell"></td>';
@@ -344,17 +347,24 @@ function getSuggestText(level) {
 
 function buildReasonText(dimScores, level) {
     var parts = [];
+    var focusParts = [];
     for (var d = 0; d < dims.length; d++) {
-        if (dimScores[d] === 10) {
+        if (dimScores[d] >= 10) {
             parts.push(dims[d].name + '高风险(10分)');
-        } else if (dimScores[d] === 5) {
+            focusParts.push('重点分析' + dims[d].name + '相关失效模式及预防措施');
+        } else if (dimScores[d] >= 5) {
             parts.push(dims[d].name + '中风险(5分)');
+            focusParts.push('关注' + dims[d].name + '相关潜在风险');
         }
     }
     if (parts.length === 0) {
         return '各维度风险较低，变更整体风险可控';
     }
-    return parts.join('、') + '，综合风险等级为' + level + '级';
+    var reason = parts.join('、') + '，综合风险等级为' + level + '级';
+    if (focusParts.length > 0) {
+        reason += '。' + focusParts.join('；');
+    }
+    return reason;
 }
 
 function calculateScore() {
@@ -373,8 +383,12 @@ function calculateScore() {
             totalWeighted += s * dims[d].weight;
         }
         totalWeighted = Math.round(totalWeighted * 100) / 100;
-        var level = getRiskLevel(totalWeighted);
-        results.push({ row: row, dimScores: dimScores, total: totalWeighted, level: level });
+        var scaledScore = Math.round(totalWeighted * 1.2 * 10) / 10;
+        if (scaledScore > 12) scaledScore = 12;
+        if (scaledScore < 1 && totalWeighted > 0) scaledScore = 1;
+        if (totalWeighted === 0) scaledScore = 0;
+        var level = getRiskLevel(scaledScore);
+        results.push({ row: row, dimScores: dimScores, total: scaledScore, rawTotal: totalWeighted, level: level });
     }
 
     if (!allFilled) {
@@ -412,6 +426,11 @@ function calculateScore() {
             sel += '</select>';
             clCell.innerHTML = sel;
         }
+
+        var rjCell = document.getElementById('rj_' + res.row.id);
+        if (rjCell) {
+            rjCell.innerHTML = '<input type="text" class="reject-input" placeholder="如拒绝建议请填写理由" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-size:11px">';
+        }
     }
 
     buildScoreSummary(results);
@@ -446,20 +465,20 @@ function buildScoreSummary(results) {
         }
         h += '</div>';
         h += '<div class="summary-total">';
-        h += '<span class="total-label">风险综合评分：</span>';
+        h += '<span class="total-label">风险综合评分(1-12分)：</span>';
         h += '<span class="total-score">' + res.total + '</span>';
         h += '<span class="total-level">' + getRiskBadge(res.level) + '</span>';
         h += '<span style="font-size:13px;color:var(--gray-600);margin-left:8px">' + getSuggestText(res.level) + '</span>';
         h += '</div>';
         h += '<div class="summary-conclusion">';
         h += '<div class="conclusion-item"><span class="clabel">DRBFM触发评估建议：</span><span class="cvalue" style="font-weight:600">' + getSuggestText(res.level) + '</span></div>';
-        h += '<div class="conclusion-item"><span class="clabel">建议理由：</span><span class="cvalue">' + buildReasonText(res.dimScores, res.level) + '</span></div>';
+        h += '<div class="conclusion-item"><span class="clabel">理由及建议分析重点：</span><span class="cvalue">' + buildReasonText(res.dimScores, res.level) + '</span></div>';
         h += '<div class="conclusion-item"><span class="clabel">最终DRBFM触发结论：</span><span class="cvalue"><select style="max-width:260px">';
         h += '<option value="H"' + (res.level === 'H' ? ' selected' : '') + '>H - 必须进行DRBFM分析</option>';
         h += '<option value="M"' + (res.level === 'M' ? ' selected' : '') + '>M - 建议进行DRBFM分析</option>';
         h += '<option value="L"' + (res.level === 'L' ? ' selected' : '') + '>L - 可以不进行DRBFM分析</option>';
         h += '</select></span></div>';
-        h += '<div class="conclusion-item"><span class="clabel">备注：</span><span class="cvalue"><textarea placeholder="可输入补充说明..."></textarea></span></div>';
+        h += '<div class="conclusion-item"><span class="clabel">拒绝建议理由：</span><span class="cvalue"><textarea placeholder="如拒绝系统建议，请填写理由..."></textarea></span></div>';
         h += '</div>';
         h += '</div>';
     }
