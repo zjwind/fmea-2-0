@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DRBFM五维风险评估表</title>
+<link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+<link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+<link rel="stylesheet" href="../css/custom.css">
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+<script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+<script src="../js/mock-data.js"></script>
+<script src="../js/common.js"></script>
+<style>
+body{background:#f1f3f5;margin:0;padding:0;font-family:var(--font-family);font-size:13px}
+.eval-page{padding:12px}
+.eval-header{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:var(--radius);padding:12px 20px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.eval-header .header-left h2{font-size:16px;font-weight:700;color:var(--gray-900);margin:0 0 4px}
+.eval-header .header-left .project-info{font-size:12px;color:var(--gray-600)}
+.eval-header .header-right{display:flex;gap:8px}
+.eval-table-wrap{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+.eval-table-scroll{overflow:auto;max-height:calc(100vh - 200px)}
+#evalTable{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content}
+#evalTable th,#evalTable td{border-right:1px solid #d0d7de;border-bottom:1px solid #d0d7de;padding:4px 6px;text-align:center;vertical-align:middle}
+#evalTable thead tr:first-child th{border-top:1px solid #d0d7de}
+#evalTable th:first-child,#evalTable td:first-child{border-left:1px solid #d0d7de}
+#evalTable th{background:#e8f0fe;color:#1557b0;font-weight:600;position:sticky;top:0;z-index:10}
+#evalTable thead tr:nth-child(2) th{top:32px}
+#evalTable thead tr:nth-child(3) th{top:64px}
+.sticky-col{position:sticky!important;z-index:20!important}
+thead .sticky-col{z-index:30!important}
+.corner-cell{z-index:40!important}
+.level-0 td{background:#fff}
+.level-1 td{background:#e3f2fd}
+.level-2 td{background:#f5f5f5}
+.level-0 .sticky-col{background:#fff!important}
+.level-1 .sticky-col{background:#e3f2fd!important}
+.level-2 .sticky-col{background:#f5f5f5!important}
+thead .sticky-col{background:#e8f0fe!important}
+.dim-header{background:#1a237e!important;color:#fff!important;font-size:13px;font-weight:700;letter-spacing:1px}
+.group-high{background:#c62828!important;color:#fff!important;font-weight:700;font-size:11px}
+.group-mid{background:#ef6c00!important;color:#fff!important;font-weight:700;font-size:11px}
+.group-low{background:#616161!important;color:#fff!important;font-weight:700;font-size:11px}
+.opt-header{background:#f0f4f8!important;color:#37474f!important;font-size:10px;font-weight:500;white-space:normal!important;word-wrap:break-word;word-break:break-all;line-height:1.25;min-width:58px;max-width:68px}
+.opt-header.dim-start{border-left:2px solid #90caf9!important}
+.dim-start{border-left:2px solid #90caf9!important}
+.score-start{border-left:2px solid #90caf9!important}
+.result-start{border-left:2px solid #90caf9!important}
+.opt-cell{padding:2px 3px!important;min-width:58px}
+.opt-cell.dim-start{border-left:2px solid #90caf9!important}
+.opt-cell .radio-wrap{display:flex;justify-content:center;align-items:center;gap:4px;flex-wrap:nowrap}
+.opt-cell label{font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:1px;margin:0;line-height:1}
+.opt-cell input[type="radio"]{margin:0;padding:0;width:11px;height:11px;vertical-align:middle;cursor:pointer}
+.score-col-header{background:#e8f0fe!important;color:#1557b0!important;font-weight:600;font-size:10px;min-width:42px}
+.result-col-header{background:#e8f0fe!important;color:#1557b0!important;font-weight:600;font-size:11px;min-width:80px}
+.score-cell{min-width:42px;font-weight:600;font-size:12px}
+.score-cell.score-start{border-left:2px solid #90caf9!important}
+.result-cell{min-width:80px;font-size:11px;text-align:left;white-space:normal;word-wrap:break-word}
+.result-cell.result-start{border-left:2px solid #90caf9!important}
+.result-cell select{width:100%;font-size:11px;padding:1px 2px;border:1px solid #ced4da;border-radius:3px;background:#fff}
+.eval-actions{display:flex;justify-content:center;gap:12px;padding:14px 0}
+.eval-summary{background:#fff;border-radius:var(--radius);padding:20px 24px;margin-top:12px;box-shadow:var(--shadow-sm)}
+.summary-title{font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--primary)}
+.summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.summary-dim-card{border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;text-align:center}
+.summary-dim-card .dim-name{font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+.summary-dim-card .dim-score{font-size:24px;font-weight:700}
+.summary-dim-card .dim-weight{font-size:11px;color:var(--gray-500);margin-top:2px}
+.summary-dim-card .dim-weighted{font-size:13px;font-weight:600;color:var(--primary);margin-top:4px}
+.score-high{color:#c62828}
+.score-mid{color:#ef6c00}
+.score-low{color:#2e7d32}
+.score-zero{color:#9e9e9e}
+.summary-total{display:flex;align-items:center;justify-content:center;gap:24px;padding:16px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200)}
+.summary-total .total-label{font-size:14px;font-weight:600;color:var(--gray-700)}
+.summary-total .total-score{font-size:28px;font-weight:700;color:var(--primary)}
+.summary-total .total-level{font-size:14px;font-weight:700}
+.summary-conclusion{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.conclusion-item{display:flex;align-items:flex-start;gap:8px}
+.conclusion-item .clabel{font-size:12px;color:var(--gray-600);min-width:120px;text-align:right;flex-shrink:0;padding-top:4px}
+.conclusion-item .cvalue{font-size:13px;color:var(--gray-800);flex:1}
+.conclusion-item .cvalue select{width:100%;max-width:280px;padding:4px 8px;border:1px solid #ced4da;border-radius:3px;font-size:12px}
+.conclusion-item .cvalue textarea{width:100%;max-width:400px;height:60px;padding:4px 8px;border:1px solid #ced4da;border-radius:3px;font-size:12px;resize:vertical;font-family:var(--font-family)}
+.last-sticky{box-shadow:4px 0 8px rgba(0,0,0,.08)}
+.risk-badge{display:inline-block;padding:2px 12px;border-radius:3px;font-weight:700;font-size:12px;letter-spacing:1px}
+.risk-H{background:#ea4335;color:#fff}
+.risk-M{background:#fbbc04;color:#333}
+.risk-L{background:#9aa0a6;color:#fff}
+</style>
+</head>
+<body>
+<div class="eval-page">
+<div class="eval-header">
+<div class="header-left">
+<h2>DRBFM五维风险评估表</h2>
+<div class="project-info">项目：CloudEngine S12700E系列交换机DRBFM分析 &nbsp;|&nbsp; TR阶段：TR4 &nbsp;|&nbsp; 评估人：张三 &nbsp;|&nbsp; 评估日期：2026-05-29</div>
+</div>
+<div class="header-right">
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-help'" onclick="showGuide()">查看评估表说明</a>
+</div>
+</div>
+<div class="eval-table-wrap">
+<div class="eval-table-scroll" id="tableContainer"></div>
+</div>
+<div class="eval-actions">
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="calculateScore()" style="padding:4px 20px">评 分</a>
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-undo'" onclick="resetForm()">重 置</a>
+</div>
+<div id="scoreSummary" class="eval-summary" style="display:none"></div>
+</div>
+<script>
+var dims = [
+    {
+        name: '技术新颖性', weight: 0.15, weightLabel: '15%',
+        high: ['全新技术架构', '行业首例方案', '超出现有平台能力'],
+        mid: ['内部参考场景差异大', '关键器件首次使用'],
+        low: ['成熟内部参考', '仅参数调整']
+    },
+    {
+        name: '影响范围', weight: 0.30, weightLabel: '30%',
+        high: ['影响整机多子系统', '影响客户接口', '影响3+子系统'],
+        mid: ['影响2个子系统', '单一子系统核心功能'],
+        low: ['单一模块辅助功能', '局限单一器件']
+    },
+    {
+        name: '失效严重度', weight: 0.30, weightLabel: '30%',
+        high: ['人身安全/法规风险', '核心功能完全丧失', '影响整机/网络'],
+        mid: ['核心功能降级', '辅助功能丧失'],
+        low: ['性能轻微下降', '仅外观/非功能']
+    },
+    {
+        name: '变更复杂度', weight: 0.20, weightLabel: '20%',
+        high: ['全新设计无基线', '多学科交叉', '接口定义重大修改'],
+        mid: ['2个学科领域', '接口局部调整'],
+        low: ['单一学科', '简单参数调整']
+    },
+    {
+        name: '历史问题', weight: 0.05, weightLabel: '5%',
+        high: ['历史严重失效(H级)', '3+条相关失效', '历史问题未闭环'],
+        mid: ['1-2条相关失效', '闭环但未验证'],
+        low: ['已闭环且有效', '无相关记录']
+    }
+];
+
+var rows = [
+    { level: 0, id: '10', name: '整机系统', devType: 'N', imn: '必选', change: '新增100T FPGA交换芯片' },
+    { level: 1, id: '20', name: '主控板', devType: 'M', imn: '必选', change: '' },
+    { level: 2, id: '20.1', name: '主控板CPU', devType: 'M', imn: 'N', change: '' },
+    { level: 2, id: '20.2', name: '主控板FLASH/FPGA', devType: 'M', imn: 'N', change: '' },
+    { level: 1, id: '30', name: '交换网板', devType: 'M', imn: '必选', change: '' },
+    { level: 2, id: '30.1', name: '交换芯片', devType: 'N', imn: '必选', change: '' },
+    { level: 2, id: '30.2', name: '网板连接器', devType: 'M', imn: '必选', change: '' },
+    { level: 2, id: '30.3', name: '网板PCB', devType: 'M', imn: '必选', change: '' },
+    { level: 1, id: '40', name: '接口板', devType: 'N', imn: '可选', change: '' },
+    { level: 2, id: '40.1', name: '128个QSFP28端口', devType: 'N', imn: '必选', change: '新增128个QSFP28端口' },
+    { level: 2, id: '40.2', name: '64个QSFP28端口', devType: 'N', imn: 'N', change: '64个QSFP28端口' },
+    { level: 2, id: '40.3', name: 'XGE光口', devType: 'M', imn: '可选', change: '' },
+    { level: 2, id: '40.4', name: 'XGE电口', devType: 'M', imn: '可选', change: '' },
+    { level: 2, id: '40.5', name: 'BASE-T', devType: 'M', imn: '可选', change: '' }
+];
+
+var leftColDefs = [
+    { key: 'level', title: 'Level', width: 42 },
+    { key: 'id', title: 'ID', width: 48 },
+    { key: 'name', title: '系统/部件名称', width: 130 },
+    { key: 'devType', title: '开发类型', width: 52 },
+    { key: 'imn', title: 'I/M/N', width: 46 },
+    { key: 'change', title: '变更点描述', width: 140 }
+];
+
+function getLeftOffset(colIdx) {
+    var off = 0;
+    for (var i = 0; i < colIdx; i++) off += leftColDefs[i].width;
+    return off;
+}
+
+function buildTable() {
+    var h = '<table id="evalTable">';
+    h += '<thead>';
+    h += buildHeaderRow1();
+    h += buildHeaderRow2();
+    h += buildHeaderRow3();
+    h += '</thead>';
+    h += '<tbody>';
+    for (var r = 0; r < rows.length; r++) {
+        h += buildDataRow(rows[r], r);
+    }
+    h += '</tbody>';
+    h += '</table>';
+    document.getElementById('tableContainer').innerHTML = h;
+}
+
+function buildHeaderRow1() {
+    var h = '<tr>';
+    for (var i = 0; i < leftColDefs.length; i++) {
+        var isLast = (i === leftColDefs.length - 1);
+        var cls = 'sticky-col corner-cell' + (isLast ? ' last-sticky' : '');
+        h += '<th class="' + cls + '" rowspan="3" style="left:' + getLeftOffset(i) + 'px;min-width:' + leftColDefs[i].width + 'px">' + leftColDefs[i].title + '</th>';
+    }
+    for (var d = 0; d < dims.length; d++) {
+        h += '<th class="dim-header" colspan="7">' + dims[d].name + '(' + dims[d].weightLabel + ')</th>';
+    }
+    h += '<th class="score-col-header score-start" colspan="5" style="top:0">各维度得分</th>';
+    var resultHeaders = ['风险综合评分', '风险等级', 'DRBFM触发评估建议', '建议理由', '最终DRBFM触发结论'];
+    for (var r = 0; r < resultHeaders.length; r++) {
+        h += '<th class="result-col-header' + (r === 0 ? ' result-start' : '') + '" rowspan="3" style="top:0;min-width:' + (r === 0 ? 70 : r === 1 ? 55 : 100) + 'px">' + resultHeaders[r] + '</th>';
+    }
+    h += '</tr>';
+    return h;
+}
+
+function buildHeaderRow2() {
+    var h = '<tr>';
+    for (var d = 0; d < dims.length; d++) {
+        h += '<th class="group-high dim-start" colspan="3">高风险(10分)</th>';
+        h += '<th class="group-mid" colspan="2">中风险(5分)</th>';
+        h += '<th class="group-low" colspan="2">低风险(1分)</th>';
+    }
+    for (var d = 0; d < dims.length; d++) {
+        h += '<th class="score-col-header' + (d === 0 ? ' score-start' : '') + '" rowspan="2" style="top:32px;min-width:42px;font-size:10px">' + dims[d].name + '</th>';
+    }
+    h += '</tr>';
+    return h;
+}
+
+function buildHeaderRow3() {
+    var h = '<tr>';
+    for (var d = 0; d < dims.length; d++) {
+        var allOpts = dims[d].high.concat(dims[d].mid).concat(dims[d].low);
+        for (var o = 0; o < allOpts.length; o++) {
+            h += '<th class="opt-header' + (o === 0 ? ' dim-start' : '') + '" style="top:64px">' + allOpts[o] + '</th>';
+        }
+    }
+    h += '</tr>';
+    return h;
+}
+
+function buildDataRow(row, rowIdx) {
+    var h = '<tr class="level-' + row.level + '">';
+    for (var i = 0; i < leftColDefs.length; i++) {
+        var isLast = (i === leftColDefs.length - 1);
+        var cls = 'sticky-col' + (isLast ? ' last-sticky' : '');
+        var val = row[leftColDefs[i].key];
+        var style = 'left:' + getLeftOffset(i) + 'px;min-width:' + leftColDefs[i].width + 'px';
+        if (leftColDefs[i].key === 'name') {
+            var indent = row.level * 16;
+            style += ';text-align:left;padding-left:' + (8 + indent) + 'px';
+        } else if (leftColDefs[i].key === 'change') {
+            style += ';text-align:left';
+        }
+        h += '<td class="' + cls + '" style="' + style + '">' + val + '</td>';
+    }
+    if (row.level === 0) {
+        for (var d = 0; d < dims.length; d++) {
+            var allOpts = dims[d].high.concat(dims[d].mid).concat(dims[d].low);
+            for (var o = 0; o < allOpts.length; o++) {
+                var gIdx = o < dims[d].high.length ? 0 : (o < dims[d].high.length + dims[d].mid.length ? 1 : 2);
+                var gKeys = ['h', 'm', 'l'];
+                var oIdx = o < dims[d].high.length ? o : (o < dims[d].high.length + dims[d].mid.length ? o - dims[d].high.length : o - dims[d].high.length - dims[d].mid.length);
+                var rName = 'r_' + row.id + '_d' + d + '_' + gKeys[gIdx] + '_' + oIdx;
+                h += '<td class="opt-cell' + (o === 0 ? ' dim-start' : '') + '"><div class="radio-wrap">';
+                h += '<label><input type="radio" name="' + rName + '" value="是">是</label>';
+                h += '<label><input type="radio" name="' + rName + '" value="否">否</label>';
+                h += '</div></td>';
+            }
+        }
+        for (var d = 0; d < dims.length; d++) {
+            h += '<td class="score-cell' + (d === 0 ? ' score-start' : '') + '" id="sc_' + row.id + '_' + d + '"></td>';
+        }
+        h += '<td class="result-cell result-start" id="ts_' + row.id + '" style="text-align:center;font-weight:700;font-size:14px"></td>';
+        h += '<td class="result-cell" id="rl_' + row.id + '" style="text-align:center"></td>';
+        h += '<td class="result-cell" id="sg_' + row.id + '"></td>';
+        h += '<td class="result-cell" id="rs_' + row.id + '"></td>';
+        h += '<td class="result-cell" id="cl_' + row.id + '"></td>';
+    } else {
+        var totalOptCols = 0;
+        var optIdx = 0;
+        for (var d = 0; d < dims.length; d++) totalOptCols += dims[d].high.length + dims[d].mid.length + dims[d].low.length;
+        for (var c = 0; c < totalOptCols; c++) {
+            var isDimStart = false;
+            var cum = 0;
+            for (var d = 0; d < dims.length; d++) {
+                if (c === cum) { isDimStart = true; break; }
+                cum += dims[d].high.length + dims[d].mid.length + dims[d].low.length;
+            }
+            h += '<td class="opt-cell' + (isDimStart ? ' dim-start' : '') + '"></td>';
+        }
+        for (var d = 0; d < dims.length; d++) h += '<td class="score-cell' + (d === 0 ? ' score-start' : '') + '"></td>';
+        h += '<td class="result-cell result-start"></td>';
+        h += '<td class="result-cell"></td>';
+        h += '<td class="result-cell"></td>';
+        h += '<td class="result-cell"></td>';
+        h += '<td class="result-cell"></td>';
+    }
+    h += '</tr>';
+    return h;
+}
+
+function getDimScore(rowId, dimIdx) {
+    var dim = dims[dimIdx];
+    var groups = [
+        { key: 'h', count: dim.high.length },
+        { key: 'm', count: dim.mid.length },
+        { key: 'l', count: dim.low.length }
+    ];
+    var scores = [10, 5, 1];
+    for (var g = 0; g < groups.length; g++) {
+        for (var o = 0; o < groups[g].count; o++) {
+            var rName = 'r_' + rowId + '_d' + dimIdx + '_' + groups[g].key + '_' + o;
+            var checked = $('input[name="' + rName + '"]:checked');
+            if (checked.length > 0 && checked.val() === '是') {
+                return scores[g];
+            }
+        }
+    }
+    var hasAny = false;
+    for (var g = 0; g < groups.length; g++) {
+        for (var o = 0; o < groups[g].count; o++) {
+            var rName = 'r_' + rowId + '_d' + dimIdx + '_' + groups[g].key + '_' + o;
+            if ($('input[name="' + rName + '"]:checked').length > 0) {
+                hasAny = true;
+                break;
+            }
+        }
+        if (hasAny) break;
+    }
+    return hasAny ? 0 : -1;
+}
+
+function getRiskLevel(score) {
+    if (score >= 8) return 'H';
+    if (score >= 5) return 'M';
+    return 'L';
+}
+
+function getRiskBadge(level) {
+    return '<span class="risk-badge risk-' + level + '">' + level + '</span>';
+}
+
+function getSuggestText(level) {
+    var map = { H: '必须进行DRBFM分析', M: '建议进行DRBFM分析', L: '可以不进行DRBFM分析' };
+    return map[level] || '';
+}
+
+function buildReasonText(dimScores, level) {
+    var parts = [];
+    for (var d = 0; d < dims.length; d++) {
+        if (dimScores[d] === 10) {
+            parts.push(dims[d].name + '高风险(10分)');
+        } else if (dimScores[d] === 5) {
+            parts.push(dims[d].name + '中风险(5分)');
+        }
+    }
+    if (parts.length === 0) {
+        return '各维度风险较低，变更整体风险可控';
+    }
+    return parts.join('、') + '，综合风险等级为' + level + '级';
+}
+
+function calculateScore() {
+    var level0Rows = rows.filter(function(r) { return r.level === 0; });
+    var allFilled = true;
+    var results = [];
+
+    for (var i = 0; i < level0Rows.length; i++) {
+        var row = level0Rows[i];
+        var dimScores = [];
+        var totalWeighted = 0;
+        for (var d = 0; d < dims.length; d++) {
+            var s = getDimScore(row.id, d);
+            if (s < 0) { allFilled = false; s = 0; }
+            dimScores.push(s);
+            totalWeighted += s * dims[d].weight;
+        }
+        totalWeighted = Math.round(totalWeighted * 100) / 100;
+        var level = getRiskLevel(totalWeighted);
+        results.push({ row: row, dimScores: dimScores, total: totalWeighted, level: level });
+    }
+
+    if (!allFilled) {
+        $.messager.alert('提示', '部分维度的选项未填写完整，未填写的维度将按0分计算。', 'warning');
+    }
+
+    for (var i = 0; i < results.length; i++) {
+        var res = results[i];
+        for (var d = 0; d < dims.length; d++) {
+            var cell = document.getElementById('sc_' + res.row.id + '_' + d);
+            if (cell) {
+                var sc = res.dimScores[d];
+                var cls = sc >= 10 ? 'score-high' : (sc >= 5 ? 'score-mid' : (sc >= 1 ? 'score-low' : 'score-zero'));
+                cell.innerHTML = '<span class="' + cls + '">' + sc + '</span>';
+            }
+        }
+        var tsCell = document.getElementById('ts_' + res.row.id);
+        if (tsCell) tsCell.innerHTML = '<span style="color:var(--primary)">' + res.total + '</span>';
+
+        var rlCell = document.getElementById('rl_' + res.row.id);
+        if (rlCell) rlCell.innerHTML = getRiskBadge(res.level);
+
+        var sgCell = document.getElementById('sg_' + res.row.id);
+        if (sgCell) sgCell.innerHTML = getSuggestText(res.level);
+
+        var rsCell = document.getElementById('rs_' + res.row.id);
+        if (rsCell) rsCell.innerHTML = buildReasonText(res.dimScores, res.level);
+
+        var clCell = document.getElementById('cl_' + res.row.id);
+        if (clCell) {
+            var sel = '<select onchange="onConclusionChange(this)">';
+            sel += '<option value="H"' + (res.level === 'H' ? ' selected' : '') + '>H - 必须进行DRBFM分析</option>';
+            sel += '<option value="M"' + (res.level === 'M' ? ' selected' : '') + '>M - 建议进行DRBFM分析</option>';
+            sel += '<option value="L"' + (res.level === 'L' ? ' selected' : '') + '>L - 可以不进行DRBFM分析</option>';
+            sel += '</select>';
+            clCell.innerHTML = sel;
+        }
+    }
+
+    buildScoreSummary(results);
+    document.getElementById('scoreSummary').style.display = '';
+    $.messager.show({ title: '评分完成', msg: '五维风险评估评分已完成，请查看评分结果。', timeout: 3000 });
+}
+
+function onConclusionChange(sel) {
+    var badge = getRiskBadge(sel.value);
+    var rowId = sel.parentNode.id.replace('cl_', '');
+    var rlCell = document.getElementById('rl_' + rowId);
+    if (rlCell) rlCell.innerHTML = badge;
+}
+
+function buildScoreSummary(results) {
+    var h = '<div class="summary-title">风险评估评分结果</div>';
+    for (var i = 0; i < results.length; i++) {
+        var res = results[i];
+        h += '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--gray-200)">';
+        h += '<div style="font-size:14px;font-weight:600;color:var(--gray-800);margin-bottom:12px">变更点：' + res.row.id + ' ' + res.row.name + ' — ' + res.row.change + '</div>';
+        h += '<div class="summary-grid">';
+        for (var d = 0; d < dims.length; d++) {
+            var sc = res.dimScores[d];
+            var cls = sc >= 10 ? 'score-high' : (sc >= 5 ? 'score-mid' : (sc >= 1 ? 'score-low' : 'score-zero'));
+            var weighted = Math.round(sc * dims[d].weight * 100) / 100;
+            h += '<div class="summary-dim-card">';
+            h += '<div class="dim-name">' + dims[d].name + '</div>';
+            h += '<div class="dim-score ' + cls + '">' + sc + '</div>';
+            h += '<div class="dim-weight">权重 ' + dims[d].weightLabel + '</div>';
+            h += '<div class="dim-weighted">加权 ' + weighted + '</div>';
+            h += '</div>';
+        }
+        h += '</div>';
+        h += '<div class="summary-total">';
+        h += '<span class="total-label">风险综合评分：</span>';
+        h += '<span class="total-score">' + res.total + '</span>';
+        h += '<span class="total-level">' + getRiskBadge(res.level) + '</span>';
+        h += '<span style="font-size:13px;color:var(--gray-600);margin-left:8px">' + getSuggestText(res.level) + '</span>';
+        h += '</div>';
+        h += '<div class="summary-conclusion">';
+        h += '<div class="conclusion-item"><span class="clabel">DRBFM触发评估建议：</span><span class="cvalue" style="font-weight:600">' + getSuggestText(res.level) + '</span></div>';
+        h += '<div class="conclusion-item"><span class="clabel">建议理由：</span><span class="cvalue">' + buildReasonText(res.dimScores, res.level) + '</span></div>';
+        h += '<div class="conclusion-item"><span class="clabel">最终DRBFM触发结论：</span><span class="cvalue"><select style="max-width:260px">';
+        h += '<option value="H"' + (res.level === 'H' ? ' selected' : '') + '>H - 必须进行DRBFM分析</option>';
+        h += '<option value="M"' + (res.level === 'M' ? ' selected' : '') + '>M - 建议进行DRBFM分析</option>';
+        h += '<option value="L"' + (res.level === 'L' ? ' selected' : '') + '>L - 可以不进行DRBFM分析</option>';
+        h += '</select></span></div>';
+        h += '<div class="conclusion-item"><span class="clabel">备注：</span><span class="cvalue"><textarea placeholder="可输入补充说明..."></textarea></span></div>';
+        h += '</div>';
+        h += '</div>';
+    }
+    document.getElementById('scoreSummary').innerHTML = h;
+}
+
+function resetForm() {
+    $.messager.confirm('确认', '确定要重置所有评估选项和评分结果吗？', function(ok) {
+        if (ok) {
+            $('input[type="radio"]').prop('checked', false);
+            $('td.score-cell, td.result-cell').empty();
+            document.getElementById('scoreSummary').style.display = 'none';
+            document.getElementById('scoreSummary').innerHTML = '';
+            $.messager.show({ title: '提示', msg: '评估表已重置', timeout: 2000 });
+        }
+    });
+}
+
+function showGuide() {
+    if (parent && parent.Common && parent.Common.addTab) {
+        parent.Common.addTab('评估表说明', 'pages/evaluation-5dim-guide.html');
+    } else {
+        window.open('evaluation-5dim-guide.html', '_blank');
+    }
+}
+
+$(function() {
+    buildTable();
+    setTimeout(adjustStickyHeaders, 100);
+});
+
+function adjustStickyHeaders() {
+    var $table = $('#evalTable');
+    if (!$table.length) return;
+    var $rows = $table.find('thead tr');
+    if ($rows.length < 3) return;
+    var h1 = $($rows[0]).outerHeight();
+    var h2 = $($rows[1]).outerHeight();
+    $($rows[1]).find('th').not('.sticky-col').css('top', h1 + 'px');
+    $($rows[2]).find('th').not('.sticky-col').css('top', (h1 + h2) + 'px');
+    $($rows[0]).find('th.sticky-col').css('top', '0');
+    $($rows[1]).find('th.sticky-col').css('top', h1 + 'px');
+    $($rows[2]).find('th.sticky-col').css('top', (h1 + h2) + 'px');
+}
+</script>
+</body>
+</html>
