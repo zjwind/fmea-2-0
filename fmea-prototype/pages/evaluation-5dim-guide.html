@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+    <script src="https://www.jeasyui.com/easyui/locale/easyui-lang-zh_CN.js"></script>
+    <link rel="stylesheet" href="../css/custom.css">
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/common.js"></script>
+    <style>
+        .doc-container { max-width: 1100px; margin: 0 auto; padding: 20px 32px; background: #fff; }
+        .doc-container h1 { font-size: 22px; font-weight: 700; color: #1a237e; border-bottom: 3px solid #1a73e8; padding-bottom: 12px; margin-bottom: 24px; }
+        .doc-container h2 { font-size: 17px; font-weight: 600; color: #283593; margin: 28px 0 14px; padding-left: 12px; border-left: 4px solid #1a73e8; }
+        .doc-container h3 { font-size: 14px; font-weight: 600; color: #37474f; margin: 20px 0 10px; }
+        .doc-container p { font-size: 13px; line-height: 1.8; color: #37474f; margin: 8px 0; }
+        .doc-container ul, .doc-container ol { padding-left: 24px; margin: 8px 0; }
+        .doc-container li { font-size: 13px; line-height: 1.8; color: #37474f; margin: 4px 0; }
+        .doc-container table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+        .doc-container table th, .doc-container table td { border: 1px solid #dee2e6; padding: 8px 12px; font-size: 12px; text-align: center; }
+        .doc-container table th { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+        .doc-container table td { background: #fff; }
+        .doc-container .img-section { margin: 20px 0; text-align: center; }
+        .doc-container .img-section img { max-width: 100%; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .doc-container .img-section .img-caption { font-size: 12px; color: #868e96; margin-top: 8px; }
+        .doc-container .formula-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px 20px; margin: 14px 0; font-size: 14px; text-align: center; font-weight: 600; color: #1a237e; }
+        .doc-container .highlight { background: #fff3e0; border-left: 4px solid #f57f17; padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+        .doc-container .highlight p { margin: 4px 0; }
+        .dim-card { display: inline-block; width: 18.5%; vertical-align: top; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 14px; margin: 4px 0.5%; text-align: center; }
+        .dim-card .dim-name { font-size: 14px; font-weight: 700; color: #283593; margin-bottom: 4px; }
+        .dim-card .dim-weight { font-size: 22px; font-weight: 700; color: #1a73e8; }
+        .dim-card .dim-weight-unit { font-size: 12px; color: #868e96; }
+        .dim-card .dim-desc { font-size: 11px; color: #868e96; margin-top: 6px; }
+        .risk-h { background: #ffebee; color: #c62828; font-weight: 700; }
+        .risk-m { background: #fff8e1; color: #f57f17; font-weight: 700; }
+        .risk-l { background: #f5f5f5; color: #757575; font-weight: 700; }
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f5;">
+<div class="doc-container">
+
+    <h1>DRBFM触发评估表 — 五维风险评估说明</h1>
+
+    <h2>一、评估表概述</h2>
+    <p>DRBFM触发评估表是DRBFM全生命周期管理流程的核心入口，用于系统化评估设计变更的风险等级，判定是否需要触发DRBFM深度分析。评估表采用<strong>五维风险评估模型</strong>，从技术新颖性、影响范围、失效严重度、变更复杂度、历史问题五个维度对每条LEVEL=0（系统级）变更点进行量化评分。</p>
+    <p>评估表仅针对<strong>LEVEL=0的变更点清单项</strong>进行五维评估，子级变更点（LEVEL=1/2/3）不单独评估，其风险已体现在系统级评估中。</p>
+
+    <h2>二、五维评估模型</h2>
+    <p>五个评估维度及其权重如下：</p>
+    <div style="text-align:center;margin:16px 0;">
+        <div class="dim-card">
+            <div class="dim-name">技术新颖性</div>
+            <div class="dim-weight">15<span class="dim-weight-unit">%</span></div>
+            <div class="dim-desc">tech_novelty</div>
+        </div>
+        <div class="dim-card">
+            <div class="dim-name">影响范围</div>
+            <div class="dim-weight">30<span class="dim-weight-unit">%</span></div>
+            <div class="dim-desc">impact_scope</div>
+        </div>
+        <div class="dim-card">
+            <div class="dim-name">失效严重度</div>
+            <div class="dim-weight">30<span class="dim-weight-unit">%</span></div>
+            <div class="dim-desc">severity</div>
+        </div>
+        <div class="dim-card">
+            <div class="dim-name">变更复杂度</div>
+            <div class="dim-weight">20<span class="dim-weight-unit">%</span></div>
+            <div class="dim-desc">change_complexity</div>
+        </div>
+        <div class="dim-card">
+            <div class="dim-name">历史问题</div>
+            <div class="dim-weight">5<span class="dim-weight-unit">%</span></div>
+            <div class="dim-desc">history_issue</div>
+        </div>
+    </div>
+
+    <h2>三、维度选项结构与评分规则</h2>
+    <p>每个维度提供<strong>高/中/低三组选项</strong>，用户逐项勾选"是/否/空白"：</p>
+    <table>
+        <tr>
+            <th>选项组</th>
+            <th>选项数量</th>
+            <th>评分规则</th>
+            <th>得分含义</th>
+        </tr>
+        <tr>
+            <td><span class="risk-h" style="padding:2px 8px;border-radius:3px;">高组</span></td>
+            <td>3个选项</td>
+            <td>任一选项选"是" → 该维度得满分（10分）</td>
+            <td>高风险，需重点关注</td>
+        </tr>
+        <tr>
+            <td><span class="risk-m" style="padding:2px 8px;border-radius:3px;">中组</span></td>
+            <td>2个选项</td>
+            <td>高组无"是"时，中组任一选"是" → 得中分（5分）</td>
+            <td>中等风险，需适度关注</td>
+        </tr>
+        <tr>
+            <td><span class="risk-l" style="padding:2px 8px;border-radius:3px;">低组</span></td>
+            <td>2个选项</td>
+            <td>高、中组均无"是"时，低组任一选"是" → 得低分（1分）</td>
+            <td>低风险，常规关注</td>
+        </tr>
+        <tr>
+            <td>—</td>
+            <td>—</td>
+            <td>三组均无"是" → 得0分</td>
+            <td>该维度无风险</td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <p><strong>评分优先级：</strong>高组 → 中组 → 低组，按优先级取最高分。即：高组有"是"则直接取10分，不再看中组和低组；高组无"是"才看中组；中组也无"是"才看低组。</p>
+    </div>
+
+    <h2>四、各维度选项明细</h2>
+
+    <h3>4.1 技术新颖性（权重15%）</h3>
+    <table>
+        <tr><th>组别</th><th>序号</th><th>选项描述</th></tr>
+        <tr><td rowspan="3"><span class="risk-h" style="padding:2px 8px;border-radius:3px;">高组(10分)</span></td><td>1</td><td style="text-align:left;">采用全新技术/架构，无公司内部应用经验</td></tr>
+        <tr><td>2</td><td style="text-align:left;">采用行业首例技术方案</td></tr>
+        <tr><td>3</td><td style="text-align:left;">核心功能/性能指标超出现有平台能力</td></tr>
+        <tr><td rowspan="2"><span class="risk-m" style="padding:2px 8px;border-radius:3px;">中组(5分)</span></td><td>4</td><td style="text-align:left;">技术方案有内部参考但应用场景差异较大</td></tr>
+        <tr><td>5</td><td style="text-align:left;">关键器件/材料首次使用</td></tr>
+        <tr><td rowspan="2"><span class="risk-l" style="padding:2px 8px;border-radius:3px;">低组(1分)</span></td><td>6</td><td style="text-align:left;">技术方案有成熟内部参考，场景相似</td></tr>
+        <tr><td>7</td><td style="text-align:left;">仅参数调整，技术原理不变</td></tr>
+    </table>
+
+    <h3>4.2 影响范围（权重30%）</h3>
+    <table>
+        <tr><th>组别</th><th>序号</th><th>选项描述</th></tr>
+        <tr><td rowspan="3"><span class="risk-h" style="padding:2px 8px;border-radius:3px;">高组(10分)</span></td><td>1</td><td style="text-align:left;">变更影响整机系统，涉及多个子系统交互</td></tr>
+        <tr><td>2</td><td style="text-align:left;">变更影响客户接口/业务面，客户直接感知</td></tr>
+        <tr><td>3</td><td style="text-align:left;">变更影响3个及以上子系统/模块</td></tr>
+        <tr><td rowspan="2"><span class="risk-m" style="padding:2px 8px;border-radius:3px;">中组(5分)</span></td><td>4</td><td style="text-align:left;">变更影响2个子系统/模块</td></tr>
+        <tr><td>5</td><td style="text-align:left;">变更影响单一子系统但涉及核心功能</td></tr>
+        <tr><td rowspan="2"><span class="risk-l" style="padding:2px 8px;border-radius:3px;">低组(1分)</span></td><td>6</td><td style="text-align:left;">变更仅影响单一模块的辅助功能</td></tr>
+        <tr><td>7</td><td style="text-align:left;">变更范围局限于单一器件/组件</td></tr>
+    </table>
+
+    <h3>4.3 失效严重度（权重30%）</h3>
+    <table>
+        <tr><th>组别</th><th>序号</th><th>选项描述</th></tr>
+        <tr><td rowspan="3"><span class="risk-h" style="padding:2px 8px;border-radius:3px;">高组(10分)</span></td><td>1</td><td style="text-align:left;">失效可能导致人身安全风险或法规不符合</td></tr>
+        <tr><td>2</td><td style="text-align:left;">失效导致核心功能完全丧失，业务中断</td></tr>
+        <tr><td>3</td><td style="text-align:left;">失效影响整机或网络级运行</td></tr>
+        <tr><td rowspan="2"><span class="risk-m" style="padding:2px 8px;border-radius:3px;">中组(5分)</span></td><td>4</td><td style="text-align:left;">失效导致核心功能降级，客户业务受影响</td></tr>
+        <tr><td>5</td><td style="text-align:left;">失效导致辅助功能丧失，客户体验显著下降</td></tr>
+        <tr><td rowspan="2"><span class="risk-l" style="padding:2px 8px;border-radius:3px;">低组(1分)</span></td><td>6</td><td style="text-align:left;">失效仅导致性能轻微下降，客户可容忍</td></tr>
+        <tr><td>7</td><td style="text-align:left;">失效仅影响外观或非功能性指标</td></tr>
+    </table>
+
+    <h3>4.4 变更复杂度（权重20%）</h3>
+    <table>
+        <tr><th>组别</th><th>序号</th><th>选项描述</th></tr>
+        <tr><td rowspan="3"><span class="risk-h" style="padding:2px 8px;border-radius:3px;">高组(10分)</span></td><td>1</td><td style="text-align:left;">变更涉及全新设计，无历史基线参考</td></tr>
+        <tr><td>2</td><td style="text-align:left;">变更涉及多学科交叉（硬件+软件+结构+工艺）</td></tr>
+        <tr><td>3</td><td style="text-align:left;">变更导致接口定义重大修改</td></tr>
+        <tr><td rowspan="2"><span class="risk-m" style="padding:2px 8px;border-radius:3px;">中组(5分)</span></td><td>4</td><td style="text-align:left;">变更涉及2个学科领域</td></tr>
+        <tr><td>5</td><td style="text-align:left;">变更对现有接口有局部调整</td></tr>
+        <tr><td rowspan="2"><span class="risk-l" style="padding:2px 8px;border-radius:3px;">低组(1分)</span></td><td>6</td><td style="text-align:left;">变更仅涉及单一学科领域</td></tr>
+        <tr><td>7</td><td style="text-align:left;">变更为简单参数/配置调整</td></tr>
+    </table>
+
+    <h3>4.5 历史问题（权重5%）</h3>
+    <table>
+        <tr><th>组别</th><th>序号</th><th>选项描述</th></tr>
+        <tr><td rowspan="3"><span class="risk-h" style="padding:2px 8px;border-radius:3px;">高组(10分)</span></td><td>1</td><td style="text-align:left;">同类变更在历史项目中发生过严重失效（H级）</td></tr>
+        <tr><td>2</td><td style="text-align:left;">历史问题库中存在3条及以上相关失效记录</td></tr>
+        <tr><td>3</td><td style="text-align:left;">历史问题尚未完全闭环</td></tr>
+        <tr><td rowspan="2"><span class="risk-m" style="padding:2px 8px;border-radius:3px;">中组(5分)</span></td><td>4</td><td style="text-align:left;">历史问题库中存在1-2条相关失效记录</td></tr>
+        <tr><td>5</td><td style="text-align:left;">历史问题已闭环但措施有效性未充分验证</td></tr>
+        <tr><td rowspan="2"><span class="risk-l" style="padding:2px 8px;border-radius:3px;">低组(1分)</span></td><td>6</td><td style="text-align:left;">历史问题已闭环且措施有效</td></tr>
+        <tr><td>7</td><td style="text-align:left;">无相关历史问题记录</td></tr>
+    </table>
+
+    <h2>五、风险综合评分计算</h2>
+    <p>五维评分完成后，系统按以下公式计算风险综合评分：</p>
+    <div class="formula-box">
+        风险综合评分 = 技术新颖性 × 15% + 影响范围 × 30% + 失效严重度 × 30% + 变更复杂度 × 20% + 历史问题 × 5%
+    </div>
+    <p>其中，各维度得分按上述"高组→中组→低组"优先级规则确定（10分/5分/1分/0分），综合评分结果保留两位小数。</p>
+
+    <h3>评分示例</h3>
+    <table>
+        <tr>
+            <th>维度</th><th>高组</th><th>中组</th><th>低组</th><th>维度得分</th><th>权重</th><th>加权得分</th>
+        </tr>
+        <tr>
+            <td>技术新颖性</td><td>有"是"</td><td>—</td><td>—</td><td><span class="risk-h">10</span></td><td>15%</td><td>1.50</td>
+        </tr>
+        <tr>
+            <td>影响范围</td><td>无"是"</td><td>有"是"</td><td>—</td><td><span class="risk-m">5</span></td><td>30%</td><td>1.50</td>
+        </tr>
+        <tr>
+            <td>失效严重度</td><td>有"是"</td><td>—</td><td>—</td><td><span class="risk-h">10</span></td><td>30%</td><td>3.00</td>
+        </tr>
+        <tr>
+            <td>变更复杂度</td><td>无"是"</td><td>无"是"</td><td>有"是"</td><td><span class="risk-l">1</span></td><td>20%</td><td>0.20</td>
+        </tr>
+        <tr>
+            <td>历史问题</td><td>无"是"</td><td>有"是"</td><td>—</td><td><span class="risk-m">5</span></td><td>5%</td><td>0.25</td>
+        </tr>
+        <tr>
+            <td colspan="5" style="text-align:right;font-weight:700;">风险综合评分</td><td colspan="2" style="font-weight:700;font-size:16px;color:#c62828;">6.45</td>
+        </tr>
+    </table>
+
+    <h2>六、风险等级判定</h2>
+    <table>
+        <tr><th>风险综合评分</th><th>风险等级</th><th>DRBFM触发建议</th><th>标识色</th></tr>
+        <tr><td>≥ 8分</td><td><span class="risk-h" style="padding:2px 12px;border-radius:3px;">H（高风险）</span></td><td>必须进行DRBFM分析</td><td style="background:#ea4335;">&nbsp;</td></tr>
+        <tr><td>≥ 5分 且 &lt; 8分</td><td><span class="risk-m" style="padding:2px 12px;border-radius:3px;">M（中风险）</span></td><td>建议进行DRBFM分析</td><td style="background:#fbbc04;">&nbsp;</td></tr>
+        <tr><td>&lt; 5分</td><td><span class="risk-l" style="padding:2px 12px;border-radius:3px;">L（低风险）</span></td><td>可以不进行DRBFM分析</td><td style="background:#9aa0a6;">&nbsp;</td></tr>
+    </table>
+
+    <div class="highlight">
+        <p><strong>注意：</strong>系统自动填充"DRBFM触发评估建议"和"最终DRBFM触发结论"，默认结论与风险等级一致。PSE和TSE复核时可手动修改最终结论。</p>
+    </div>
+
+    <h2>七、评估表结构图</h2>
+    <p>以下为评估表五维评分的结构示意图，展示了评估表的完整布局：左侧为变更点清单的结构组成，右侧为五个维度的评分区域，每个维度包含高/中/低三组选项列。</p>
+
+    <div class="img-section">
+        <img src="../images/evaluation-5dim-1.jpg" alt="评估表五维评分结构图（第1部分：技术新颖性、影响范围、失效严重度）">
+        <div class="img-caption">图1：评估表五维评分结构 — 技术新颖性(15%)、影响范围(30%)、失效严重度(30%)</div>
+    </div>
+
+    <div class="img-section">
+        <img src="../images/evaluation-5dim-2.jpg" alt="评估表五维评分结构图（第2部分：变更复杂度、历史问题）">
+        <div class="img-caption">图2：评估表五维评分结构 — 变更复杂度(20%)、历史问题(5%)</div>
+    </div>
+
+    <h2>八、操作流程</h2>
+    <ol>
+        <li>TSE进入评估任务页面，系统筛选出LEVEL=0的变更点清单项</li>
+        <li>对每条LEVEL=0的变更点，展示五维评估表单</li>
+        <li>TSE逐项填写五个维度的选项（每个维度的高/中/低组选项中选择"是/否/空白"）</li>
+        <li>TSE填写完成后点击"评分"按钮</li>
+        <li>系统按公式计算风险综合评分，自动判定风险等级（H/M/L）</li>
+        <li>系统自动填充"DRBFM触发评估建议"和"最终DRBFM触发结论"</li>
+        <li>PSE和TSE复核评分结果，确认评估</li>
+    </ol>
+
+    <div class="highlight">
+        <p><strong>前置条件：</strong></p>
+        <ul>
+            <li>评估表已通过PSE审核</li>
+            <li>历史问题已导入（可选）</li>
+            <li>当前用户为TSE角色</li>
+            <li>五维评分必须由用户手动填写，系统不自动填充选项</li>
+        </ul>
+    </div>
+
+</div>
+</body>
+</html>

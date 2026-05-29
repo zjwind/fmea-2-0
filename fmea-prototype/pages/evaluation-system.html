@@ -64,7 +64,9 @@ body{background:#f1f3f5;padding:12px;font-family:var(--font-family)}
 </style>
 </head>
 <body>
-<div class="step-bar" id="stepBar"></div>
+<div class="step-bar" id="stepBar" style="position:relative;">
+    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="iconCls:'icon-help'" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);" onclick="parent.Common.addTab('评估表说明','pages/evaluation-5dim-guide.html')">评估表说明</a>
+</div>
 <div class="step-content" id="stepContent"></div>
 <div class="nav-bar">
 <div class="btn-group">
