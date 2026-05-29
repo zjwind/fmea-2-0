@@ -47,7 +47,7 @@ function generateFailure() {
     for (var i = 0; i < data.length; i++) {
         var d = data[i];
         html += '<tr><td>' + d.structure + '</td><td>' + d.function + '</td><td>' + d.mode + '</td>';
-        html += '<td style="font-weight:700;color:' + (d.confidence > 0.9 ? '#c62828' : '#f57f17') + ';">' + (d.confidence * 100).toFixed(0) + '%</td>';
+        html += '<td style="font-weight:700;color:' + (d.confidence > 0.9 ? '#dc2626' : '#d97706') + ';">' + (d.confidence * 100).toFixed(0) + '%</td>';
         html += '<td style="text-align:left;">' + d.reason + '</td>';
         html += '<td><a href="javascript:void(0)" class="easyui-linkbutton" onclick="parent.Common.showInfo(\'采纳推荐（原型演示）\')">采纳</a></td></tr>';
     }

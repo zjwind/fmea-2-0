@@ -41,10 +41,10 @@
             font-size: 20px;
             flex-shrink: 0;
         }
-        .stat-card .st-icon.blue { background: #e8f0fe; color: #1a73e8; }
-        .stat-card .st-icon.green { background: #e6f4ea; color: #34a853; }
-        .stat-card .st-icon.orange { background: #fef7e0; color: #fbbc04; }
-        .stat-card .st-icon.red { background: #fce8e6; color: #ea4335; }
+        .stat-card .st-icon.blue { background: #eef0fe; color: #4f6ef7; }
+        .stat-card .st-icon.green { background: #e6f4ea; color: #22c55e; }
+        .stat-card .st-icon.orange { background: #fef7e0; color: #f59e0b; }
+        .stat-card .st-icon.red { background: #fce8e6; color: #ef4444; }
         .stat-card .st-icon.gray { background: #f1f3f5; color: #5f6368; }
         .stat-card .st-value {
             font-size: 26px;
@@ -321,7 +321,7 @@ var currentRow = null;
 var allTasks = [];
 
 function progressFormatter(value) {
-    var color = value >= 100 ? '#34a853' : (value > 0 ? '#1a73e8' : '#dee2e6');
+    var color = value >= 100 ? '#22c55e' : (value > 0 ? '#4f6ef7' : '#dee2e6');
     return '<div style="display:flex;align-items:center;gap:6px;">' +
         '<div style="flex:1;background:#e9ecef;border-radius:3px;height:6px;overflow:hidden;">' +
         '<div style="background:' + color + ';height:100%;width:' + value + '%;border-radius:3px;"></div></div>' +

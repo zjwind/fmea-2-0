@@ -12,30 +12,30 @@
     <script src="../js/common.js"></script>
     <style>
         .doc-container { max-width: 1100px; margin: 0 auto; padding: 20px 32px; background: #fff; }
-        .doc-container h1 { font-size: 22px; font-weight: 700; color: #1a237e; border-bottom: 3px solid #1a73e8; padding-bottom: 12px; margin-bottom: 24px; }
-        .doc-container h2 { font-size: 17px; font-weight: 600; color: #283593; margin: 28px 0 14px; padding-left: 12px; border-left: 4px solid #1a73e8; }
+        .doc-container h1 { font-size: 22px; font-weight: 700; color: #1a237e; border-bottom: 3px solid #4f6ef7; padding-bottom: 12px; margin-bottom: 24px; }
+        .doc-container h2 { font-size: 17px; font-weight: 600; color: #283593; margin: 28px 0 14px; padding-left: 12px; border-left: 4px solid #4f6ef7; }
         .doc-container h3 { font-size: 14px; font-weight: 600; color: #37474f; margin: 20px 0 10px; }
         .doc-container p { font-size: 13px; line-height: 1.8; color: #37474f; margin: 8px 0; }
         .doc-container ul, .doc-container ol { padding-left: 24px; margin: 8px 0; }
         .doc-container li { font-size: 13px; line-height: 1.8; color: #37474f; margin: 4px 0; }
         .doc-container table { width: 100%; border-collapse: collapse; margin: 14px 0; }
         .doc-container table th, .doc-container table td { border: 1px solid #dee2e6; padding: 8px 12px; font-size: 12px; text-align: center; }
-        .doc-container table th { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+        .doc-container table th { background: #eef0fe; color: #4f6ef7; font-weight: 600; }
         .doc-container table td { background: #fff; }
         .doc-container .img-section { margin: 20px 0; text-align: center; }
         .doc-container .img-section img { max-width: 100%; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
         .doc-container .img-section .img-caption { font-size: 12px; color: #868e96; margin-top: 8px; }
         .doc-container .formula-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px 20px; margin: 14px 0; font-size: 14px; text-align: center; font-weight: 600; color: #1a237e; }
-        .doc-container .highlight { background: #fff3e0; border-left: 4px solid #f57f17; padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+        .doc-container .highlight { background: #fff3e0; border-left: 4px solid #d97706; padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
         .doc-container .highlight p { margin: 4px 0; }
         .dim-card { display: inline-block; width: 18.5%; vertical-align: top; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 14px; margin: 4px 0.5%; text-align: center; }
         .dim-card .dim-name { font-size: 14px; font-weight: 700; color: #283593; margin-bottom: 4px; }
-        .dim-card .dim-weight { font-size: 22px; font-weight: 700; color: #1a73e8; }
+        .dim-card .dim-weight { font-size: 22px; font-weight: 700; color: #4f6ef7; }
         .dim-card .dim-weight-unit { font-size: 12px; color: #868e96; }
         .dim-card .dim-desc { font-size: 11px; color: #868e96; margin-top: 6px; }
-        .risk-h { background: #ffebee; color: #c62828; font-weight: 700; }
-        .risk-m { background: #fff8e1; color: #f57f17; font-weight: 700; }
-        .risk-l { background: #f5f5f5; color: #757575; font-weight: 700; }
+        .risk-h { background: #ffebee; color: #dc2626; font-weight: 700; }
+        .risk-m { background: #fff8e1; color: #d97706; font-weight: 700; }
+        .risk-l { background: #f5f5f5; color: #6b7280; font-weight: 700; }
     </style>
 </head>
 <body style="margin:0;padding:0;background:#f1f3f5;">
@@ -206,16 +206,16 @@
             <td>历史问题</td><td>无"是"</td><td>有"是"</td><td>—</td><td><span class="risk-m">5</span></td><td>5%</td><td>0.25</td>
         </tr>
         <tr>
-            <td colspan="5" style="text-align:right;font-weight:700;">风险综合评分(1-12分)</td><td colspan="2" style="font-weight:700;font-size:16px;color:#c62828;">7.7</td>
+            <td colspan="5" style="text-align:right;font-weight:700;">风险综合评分(1-12分)</td><td colspan="2" style="font-weight:700;font-size:16px;color:#dc2626;">7.7</td>
         </tr>
     </table>
 
     <h2>六、风险等级判定</h2>
     <table>
         <tr><th>风险综合评分</th><th>风险等级</th><th>DRBFM触发建议</th><th>标识色</th></tr>
-        <tr><td>≥ 8分</td><td><span class="risk-h" style="padding:2px 12px;border-radius:3px;">H（高风险）</span></td><td>必须进行DRBFM分析</td><td style="background:#ea4335;">&nbsp;</td></tr>
-        <tr><td>≥ 5分 且 &lt; 8分</td><td><span class="risk-m" style="padding:2px 12px;border-radius:3px;">M（中风险）</span></td><td>建议进行DRBFM分析</td><td style="background:#fbbc04;">&nbsp;</td></tr>
-        <tr><td>&lt; 5分</td><td><span class="risk-l" style="padding:2px 12px;border-radius:3px;">L（低风险）</span></td><td>可以不进行DRBFM分析</td><td style="background:#9aa0a6;">&nbsp;</td></tr>
+        <tr><td>≥ 8分</td><td><span class="risk-h" style="padding:2px 12px;border-radius:3px;">H（高风险）</span></td><td>必须进行DRBFM分析</td><td style="background:#ef4444;">&nbsp;</td></tr>
+        <tr><td>≥ 5分 且 &lt; 8分</td><td><span class="risk-m" style="padding:2px 12px;border-radius:3px;">M（中风险）</span></td><td>建议进行DRBFM分析</td><td style="background:#f59e0b;">&nbsp;</td></tr>
+        <tr><td>&lt; 5分</td><td><span class="risk-l" style="padding:2px 12px;border-radius:3px;">L（低风险）</span></td><td>可以不进行DRBFM分析</td><td style="background:#9ca3af;">&nbsp;</td></tr>
     </table>
 
     <div class="highlight">
