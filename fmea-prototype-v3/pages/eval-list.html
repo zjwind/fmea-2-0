@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>评估任务</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb">评估任务 / <b id="bc"></b></div>
+            <div class="page-title" id="ptitle"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="toolbar">
+            <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input class="input" id="kw" placeholder="搜索项目 / 任务名称" oninput="render()">
+            </div>
+            <select class="select" id="st" onchange="render()">
+                <option value="">全部状态</option>
+                <option>待开始</option><option>进行中</option><option>待审核</option>
+                <option>协作人签核中</option><option>已完成</option>
+            </select>
+            <div class="spacer"></div>
+            <span class="fz13 muted">共 <b id="cnt"></b> 条</span>
+        </div>
+
+        <div class="tbl-wrap">
+            <table class="tbl">
+                <thead><tr>
+                    <th>项目</th><th>里程碑</th><th>任务名称</th><th>TSE</th><th>PSE</th>
+                    <th id="collabHead" style="display:none">协作人</th>
+                    <th>状态</th><th>开始时间</th><th>期望结束</th><th style="width:230px">操作</th>
+                </tr></thead>
+                <tbody id="rows"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+var level = Page.qs('level') || 'system';
+var isPart = level === 'part';
+document.getElementById('bc').textContent = isPart ? '部件级' : '系统级';
+document.getElementById('ptitle').innerHTML = (isPart ? '部件级' : '系统级') + ' DRBFM 评估任务 <span class="sub">导入变更清单 → 自动匹配 → 审核 → 五维评分 → 复核生成分析任务</span>';
+if (isPart) { document.getElementById('collabHead').style.display = ''; }
+
+function render() {
+    var kw = document.getElementById('kw').value.trim();
+    var st = document.getElementById('st').value;
+    var list = DATA.evalTasks[level].filter(function (r) {
+        return (!kw || (r.project + r.name).indexOf(kw) > -1) && (!st || r.status === st);
+    });
+    document.getElementById('cnt').textContent = list.length;
+    document.getElementById('rows').innerHTML = list.map(function (r) {
+        var canSkip = r.status === '待开始' || r.status === '进行中';
+        var collab = isPart ? '<td>' + (r.collaborators.length ? r.collaborators.map(function (c) { return '<span class="tag gray" style="margin:1px">' + c + '</span>'; }).join('') : '<span class="muted">—</span>') + '</td>' : '';
+        return '<tr>'
+            + '<td><b style="color:var(--text-primary)">' + r.project + '</b></td>'
+            + '<td><span class="tag blue">' + r.milestone + '</span></td>'
+            + '<td>' + r.name + '</td>'
+            + '<td>' + r.tse + '</td><td>' + r.pse + '</td>'
+            + collab
+            + '<td>' + Util.statusTag(r.status) + '</td>'
+            + '<td class="fz13 secondary">' + r.start + '</td><td class="fz13 secondary">' + r.due + '</td>'
+            + '<td><div class="actions">'
+            + (r.status === '已完成'
+                ? '<span class="link-btn" onclick="openEval(\'' + r.id + '\')">查看</span>'
+                : '<span class="link-btn" onclick="openEval(\'' + r.id + '\')">评估</span>')
+            + '<span class="link-btn muted" onclick="Page.toast(\'打开任务详情：' + r.id + '\')">详情</span>'
+            + (canSkip ? '<span class="link-btn muted" onclick="skip(\'' + r.id + '\')">跳过</span>' : '')
+            + '<span class="link-btn" onclick="gotoAnalysis(\'' + r.id + '\',\'' + r.status + '\')">分析任务</span>'
+            + '</div></td></tr>';
+    }).join('');
+}
+
+function openEval(id) { Page.nav('eval-process.html?id=' + id + '&level=' + level, isPart ? 'eval-part' : 'eval-system'); }
+function gotoAnalysis(id, st) {
+    if (st !== '已完成') { Page.toast('评估完成后才会生成对应分析任务', 'warning'); return; }
+    Page.nav('analysis-list.html', 'analysis');
+}
+function skip(id) {
+    Page.confirm('确认跳过评估任务 <b>' + id + '</b>？<br><span class="fz12 muted">仅项目 PM 拥有跳过权限，跳过后将不生成 DRBFM 分析任务。</span>', function () {
+        Page.toast('已跳过该评估任务', 'success');
+    });
+}
+render();
+</script>
+</body>
+</html>

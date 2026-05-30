@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SOD评价标准</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+.seg { display: inline-flex; background: var(--bg-muted); border: 1px solid var(--border); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { border: none; background: transparent; padding: 7px 18px; border-radius: 7px; cursor: pointer; font-family: var(--font); font-size: 13.5px; color: var(--text-secondary); }
+.seg button.on { background: #fff; color: var(--primary); font-weight: 600; box-shadow: var(--shadow-sm); }
+.lv-cell { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; font-weight: 700; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb">系统菜单 / <b>SOD评价标准</b></div>
+            <div class="page-title">SOD 评价标准 <span class="sub">严重度 S · 发生度 O · 探测度 D（固定标准，AP 参考表 100 行）</span></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="flex justify-between items-center mb-16">
+            <div class="seg" id="seg">
+                <button data-k="severity" class="on">严重度（S）</button>
+                <button data-k="occurrence">发生度（O）</button>
+                <button data-k="detection">探测度（D）</button>
+            </div>
+            <div class="fz13 secondary" id="hint"></div>
+        </div>
+        <div class="tbl-wrap">
+            <table class="tbl">
+                <thead><tr><th style="width:90px">等级</th><th>评价描述</th></tr></thead>
+                <tbody id="rows"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card"><div class="card-head"><div class="h"><span class="bar"></span>AP（Action Priority）判定</div></div>
+            <p class="fz13 secondary">根据 S / O / D 组合查 AP 参考表（完整 100 行），判定优先级为 H / M / L。AP 参考表为固定标准，暂不允许修改。</p>
+            <div class="flex gap-12 mt-12">
+                <div class="dim-card text-center" style="flex:1;background:var(--danger-light);border-color:var(--danger)"><b style="color:var(--danger);font-size:15px">H 高</b><div class="fz12 secondary mt-8">需立即采取措施</div></div>
+                <div class="dim-card text-center" style="flex:1;background:var(--warning-light);border-color:var(--warning)"><b style="color:#b45309;font-size:15px">M 中</b><div class="fz12 secondary mt-8">建议采取措施</div></div>
+                <div class="dim-card text-center" style="flex:1"><b style="font-size:15px">L 低</b><div class="fz12 secondary mt-8">可酌情采取措施</div></div>
+            </div>
+        </div>
+        <div class="card"><div class="card-head"><div class="h"><span class="bar"></span>探测度评价适配关键点</div></div>
+            <ul class="fz13 secondary" style="line-height:1.9;padding-left:18px;margin:0">
+                <li>探测方法：边界试验 &lt; 常规条件试验；综合应力 &lt; 单一应力</li>
+                <li>探测时机：早期探测优于后期探测</li>
+                <li>探测对象：模块/部品 &lt; 系统/整机；失效原因 &lt; 失效模式</li>
+                <li>标准定期验证更新：收集逃逸问题，反向审视评分与措施有效性</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+var hints = { severity: '严重度评价失效模式导致的最严重影响', occurrence: '发生度衡量预防措施有效性（软件/硬件采用不同规则）', detection: '探测度反映探测措施逼近真实失效机理的程度' };
+function color(lv) { return lv >= 9 ? 'background:var(--danger-light);color:var(--danger)' : lv >= 5 ? 'background:var(--warning-light);color:#b45309' : 'background:var(--success-light);color:#15803d'; }
+function load(k) {
+    document.getElementById('hint').textContent = hints[k];
+    document.getElementById('rows').innerHTML = DATA.sod[k].map(function (r) {
+        return '<tr><td><span class="lv-cell" style="' + color(r.lv) + '">' + r.lv + '</span></td><td>' + r.desc + '</td></tr>';
+    }).join('');
+}
+document.querySelectorAll('#seg button').forEach(function (b) {
+    b.onclick = function () {
+        document.querySelectorAll('#seg button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on'); load(b.getAttribute('data-k'));
+    };
+});
+load('severity');
+</script>
+</body>
+</html>

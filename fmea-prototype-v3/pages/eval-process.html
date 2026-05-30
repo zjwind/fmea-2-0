@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>评估</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+.matrix-tbl input { width: 100%; border: 1px solid transparent; background: transparent; padding: 5px 6px; border-radius: 5px; font-family: var(--font); font-size: 13px; }
+.matrix-tbl input:focus { border-color: var(--primary); background: #fff; outline: none; }
+.dim-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.dim-card.high { border-color: var(--danger); background: var(--danger-light); }
+.dim-card.mid { border-color: var(--warning); background: var(--warning-light); }
+.score-big { font-size: 40px; font-weight: 700; line-height: 1; }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb"><span class="link-btn" onclick="back()" style="color:var(--text-muted)">评估任务</span> / <b id="bcLevel"></b> / <b id="bcId"></b></div>
+            <div class="page-title" id="ptitle"></div>
+        </div>
+        <div class="flex gap-8">
+            <button class="btn" onclick="back()">返回列表</button>
+            <button class="btn" onclick="Page.toast('已撤回到草稿，可重新编辑','warning')">撤回修改</button>
+        </div>
+    </div>
+
+    <!-- 步骤条 -->
+    <div class="steps" id="steps"></div>
+
+    <!-- 内容 -->
+    <div id="stepBody"></div>
+
+    <div class="flex justify-between mt-16">
+        <button class="btn" id="prevBtn" onclick="prev()">上一步</button>
+        <div class="flex gap-8">
+            <button class="btn" onclick="Page.toast('草稿已保存','success')">保存草稿</button>
+            <button class="btn btn-primary" id="nextBtn" onclick="next()">下一步</button>
+        </div>
+    </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+var level = Page.qs('level') || 'system';
+var isPart = level === 'part';
+var id = Page.qs('id');
+var task = (DATA.evalTasks[level] || []).find(function (t) { return t.id === id; }) || DATA.evalTasks[level][0];
+
+document.getElementById('bcLevel').textContent = isPart ? '部件级' : '系统级';
+document.getElementById('bcId').textContent = task.id;
+document.getElementById('ptitle').innerHTML = task.name + ' <span class="sub">' + task.project + ' · ' + task.milestone + '</span>';
+
+var steps = isPart
+    ? ['指派协作人', '导入变更清单', '质量策划匹配', '历史问题', '五维评估与评分', '复核确认']
+    : ['导入变更清单', '质量策划匹配', '历史问题', '五维评估与评分', '复核确认'];
+var cur = 0;
+
+function renderSteps() {
+    document.getElementById('steps').innerHTML = steps.map(function (s, i) {
+        var cls = i < cur ? 'done' : i === cur ? 'active' : '';
+        return '<div class="step ' + cls + '"><div class="step-node"><div class="step-num">' + (i < cur ? '✓' : (i + 1)) + '</div>'
+            + '<div class="step-label">' + s + '</div></div>' + (i < steps.length - 1 ? '<div class="step-line"></div>' : '') + '</div>';
+    }).join('');
+    document.getElementById('prevBtn').style.visibility = cur === 0 ? 'hidden' : 'visible';
+    document.getElementById('nextBtn').textContent = cur === steps.length - 1 ? '提交并生成分析任务' : '下一步';
+}
+
+function bodyFor(name) {
+    if (name === '指派协作人') return tplCollab();
+    if (name === '导入变更清单') return tplImport();
+    if (name === '质量策划匹配') return tplQuality();
+    if (name === '历史问题') return tplHistory();
+    if (name === '五维评估与评分') return tplFiveDim();
+    if (name === '复核确认') return tplReview();
+    return '';
+}
+
+function tplCollab() {
+    var rows = (task.collaborators || []).map(function (c) {
+        return '<tr><td>' + c + '</td><td>部件级工程师</td><td><span class="tag green">已指派</span></td><td><span class="tag gray">待签核</span></td><td><span class="link-btn danger">移除</span></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>指派协作人</div>'
+        + '<button class="btn btn-primary btn-sm" onclick="addCollab()">+ 指派协作人</button></div>'
+        + '<p class="fz13 secondary">部件级评估中，TSE 可单方面指派多名协作人，授予对应变更点的编辑权限；所有协作人签核后方可提交 PSE 审核。</p>'
+        + '<div class="tbl-wrap mt-12"><table class="tbl"><thead><tr><th>协作人</th><th>角色</th><th>指派状态</th><th>签核状态</th><th>操作</th></tr></thead>'
+        + '<tbody id="collabRows">' + (rows || '<tr><td colspan="5"><div class="empty"><div class="ico">👥</div><div class="t">尚未指派协作人</div></div></td></tr>') + '</tbody></table></div></div>';
+}
+
+function tplImport() {
+    var rows = [
+        ['0', 'SYS-X9', '智能座舱域控 X9', 'M', '更换新一代SoC平台'],
+        ['1', 'P01', '主控SoC', 'N', '8核SoC，主频2.4GHz'],
+        ['1', 'P02', 'DDR内存', 'M', 'LPDDR4X→LPDDR5'],
+        ['2', 'P04', 'CAN收发器', 'M', '新增CAN-FD支持']
+    ].map(function (r) {
+        return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td><span class="tag blue">' + r[3] + '</span></td><td>' + r[4] + '</td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>变更点清单导入</div>'
+        + '<div class="flex gap-8"><button class="btn btn-sm" onclick="Page.toast(\'已下载标准模板\')">下载模板</button>'
+        + '<button class="btn btn-primary btn-sm" onclick="Page.toast(\'变更清单导入成功，已更新线上表格\',\'success\')">导入变更清单 (Excel)</button></div></div>'
+        + '<p class="fz13 secondary">变更清单由三部分组成：结构组成（Level、ID、系统/部件名称）、开发情况（开发类别 I/M/N）、变更点描述。</p>'
+        + '<div class="tbl-wrap mt-12"><table class="tbl"><thead><tr><th style="width:60px">Level</th><th>ID</th><th>系统/部件名称</th><th style="width:90px">I/M/N</th><th>变更点描述</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+}
+
+function tplQuality() {
+    return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>质量策划匹配</div>'
+        + '<div class="flex gap-8"><button class="btn btn-primary btn-sm" onclick="Page.toast(\'质量策划表导入成功\',\'success\')">导入质量策划 (Excel)</button>'
+        + '<button class="btn btn-ai btn-sm" onclick="Page.toast(\'已读取线上变更清单，自动匹配并更新变更点描述\',\'success\')">⚡ 自动匹配</button></div></div>'
+        + '<p class="fz13 secondary">导入质量策划表后，系统提取「风险小类 + 风险策划指南」字段组合，按部件名称模糊匹配，更新变更点描述。</p>'
+        + '<div class="grid-2 mt-12"><div class="placeholder-box"><div class="ico">📄</div>变更清单（已导入 4 行）<br><span class="fz12">点击「自动匹配」读取线上内容</span></div>'
+        + '<div class="placeholder-box"><div class="ico">📑</div>质量策划表<br><span class="fz12">支持多 sheet，转 Markdown 后由 AI 处理</span></div></div></div>';
+}
+
+function tplHistory() {
+    var rows = [
+        ['GZ-2024-088', 'PB-101', '散热', '硬件', 'X7', '高负载下SoC降频', '已解决'],
+        ['GZ-2023-211', 'PB-102', 'EMC', '硬件', 'X7', 'CAN通信偶发误码', '已解决']
+    ].map(function (r) {
+        return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td><span class="tag gray">' + r[2] + '</span></td><td>' + r[3] + '</td><td>' + r[4] + '</td><td>' + r[5] + '</td><td>' + Util.statusTag(r[6]) + '</td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>历史问题导入</div>'
+        + '<button class="btn btn-primary btn-sm" onclick="Page.toast(\'历史问题已导入并关联至本系统级评估任务\',\'success\')">导入历史问题</button></div>'
+        + '<p class="fz13 secondary">历史问题需与本系统级评估任务关联，后续部件级评估任务及功能分析将读取这些历史问题。</p>'
+        + '<div class="tbl-wrap mt-12"><table class="tbl"><thead><tr><th>故障单号</th><th>问题编号</th><th>类型</th><th>领域</th><th>型号</th><th>问题描述</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+}
+
+function tplFiveDim() {
+    var rows = DATA.fiveDim.map(function (d) {
+        return '<tr><td><b>' + d.name + '</b></td><td>' + d.weight + '%</td>'
+            + '<td><select class="select" style="height:30px" onchange="calc()"><option ' + (d.level === '高' ? 'selected' : '') + '>高</option><option ' + (d.level === '中' ? 'selected' : '') + '>中</option><option ' + (d.level === '低' ? 'selected' : '') + '>低</option><option>空白</option></select></td>'
+            + '<td class="fz13 secondary">' + (d.level === '高' ? '9 分' : d.level === '中' ? '6 分' : '3 分') + '</td></tr>';
+    }).join('');
+    return '<div class="grid-2">'
+        + '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>五维风险评估（LEVEL=0）</div>'
+        + '<button class="btn btn-ai btn-sm" onclick="calc(true)">⚡ 计算风险综合评分</button></div>'
+        + '<p class="fz13 secondary">每维度填写「是/否/空白」，取最高风险档分数加权计算。填完后点击评分按钮触发计算。</p>'
+        + '<div class="tbl-wrap mt-12"><table class="tbl"><thead><tr><th>评估维度</th><th>权重</th><th>风险档</th><th>得分</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>'
+        + '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>风险综合评分</div></div>'
+        + '<div class="text-center" style="padding:18px 0"><div class="score-big" id="scoreVal" style="color:var(--danger)">7.65</div>'
+        + '<div class="fz13 secondary mt-8">综合评分 = 技术新颖性×15% + 影响范围×30% + 失效严重度×30% + 变更复杂度×20% + 历史问题×5%</div></div>'
+        + '<div class="dim-card high text-center" id="concl"><b style="font-size:15px">触发结论：必须进行 DRBFM 分析（H）</b><div class="fz13 secondary mt-8">≥8分必须 · 5-8分建议 · <5分可不分析</div></div>'
+        + '<div class="form-row mt-16"><label>DRBFM 触发建议生成方式</label>'
+        + '<select class="select" style="width:100%"><option>方案一：按分数映射预定义理由</option><option>方案二：AI 根据评分动态生成</option></select></div></div></div>';
+}
+
+function tplReview() {
+    return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>复核与确认</div></div>'
+        + '<p class="fz13 secondary">PSE 与 TSE 复核评分评估表完整性。生成分析任务前将检查所有行是否完成评估，未完成将提示具体行。</p>'
+        + '<div class="grid-2 mt-12">'
+        + '<div class="dim-card"><div class="fz13 muted">TSE 复核</div><div class="flex items-center gap-8 mt-8"><div class="user-avatar" style="width:30px;height:30px;font-size:12px">' + task.tse.charAt(0) + '</div><b>' + task.tse + '</b><span class="tag green">已确认</span></div></div>'
+        + '<div class="dim-card"><div class="fz13 muted">PSE 复核</div><div class="flex items-center gap-8 mt-8"><div class="user-avatar" style="width:30px;height:30px;font-size:12px">' + task.pse.charAt(0) + '</div><b>' + task.pse + '</b><span class="tag orange">待确认</span></div></div></div>'
+        + '<div class="divider"></div>'
+        + '<div class="flex items-center gap-10"><span class="fz13 secondary">提交次数：</span><b>第 2 次提交</b>'
+        + '<span class="fz13 secondary" style="margin-left:16px">完整性检查：</span><span class="tag green">全部行已完成评估 ✓</span></div></div>';
+}
+
+function renderBody() { document.getElementById('stepBody').innerHTML = bodyFor(steps[cur]); }
+
+function calc(clicked) {
+    if (clicked) Page.toast('已根据五维评估完成风险综合评分计算', 'success');
+}
+
+function next() {
+    if (cur < steps.length - 1) {
+        cur++; renderSteps(); renderBody();
+        Page.toast('已进入：' + steps[cur], 'info');
+    } else {
+        Page.confirm('确认提交评估表并生成 DRBFM 分析任务？<br><span class="fz12 muted">系统将校验所有行已完成评估。</span>', function () {
+            Page.toast('评估表已提交，分析任务已生成', 'success');
+            setTimeout(function () { Page.nav('analysis-list.html', 'analysis'); }, 600);
+        });
+    }
+}
+function prev() { if (cur > 0) { cur--; renderSteps(); renderBody(); } }
+function back() { Page.nav('eval-list.html?level=' + level, isPart ? 'eval-part' : 'eval-system'); }
+function addCollab() {
+    Page.modal({ title: '指派协作人', width: 440, body:
+        '<div class="form-row"><label>选择人员 <span class="req">*</span></label><select class="select"><option>孙磊</option><option>周婷</option><option>吴昊</option><option>郑爽</option></select></div>'
+        + '<div class="form-row"><label>负责变更点</label><select class="select"><option>主控SoC (P01)</option><option>DDR内存 (P02)</option><option>CAN收发器 (P04)</option></select></div>',
+        onOk: function () { Page.toast('已指派协作人并授予编辑权限', 'success'); }
+    });
+}
+
+renderSteps(); renderBody();
+</script>
+</body>
+</html>

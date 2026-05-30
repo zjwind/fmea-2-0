@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>评审意见管理</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb">评审意见管理 / <b id="bc"></b></div>
+            <div class="page-title" id="ptitle"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="toolbar">
+            <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input class="input" id="kw" placeholder="搜索项目 / 分析任务 / 意见" oninput="render()">
+            </div>
+            <select class="select" id="st" onchange="render()">
+                <option value="">全部状态</option>
+                <option>待答复</option><option>已答复</option><option>已闭环</option>
+            </select>
+            <div class="spacer"></div>
+            <span class="fz13 muted">共 <b id="cnt"></b> 条</span>
+        </div>
+
+        <div class="tbl-wrap">
+            <table class="tbl">
+                <thead><tr>
+                    <th>项目</th><th>分析任务</th><th>意见负责人</th><th style="min-width:240px">意见内容</th>
+                    <th>状态</th><th style="min-width:200px">回复内容</th><th style="width:160px">操作</th>
+                </tr></thead>
+                <tbody id="rows"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+var type = Page.qs('type') || 'mine';
+var isMine = type === 'mine';
+document.getElementById('bc').textContent = isMine ? '我提出的意见' : '待我处理的意见';
+document.getElementById('ptitle').innerHTML = (isMine ? '我提出的意见' : '待我处理的意见')
+    + ' <span class="sub">' + (isMine ? '查看意见详情并闭环' : '查看意见详情并答复') + '</span>';
+
+function render() {
+    var kw = document.getElementById('kw').value.trim();
+    var st = document.getElementById('st').value;
+    var list = DATA.opinions[type].filter(function (r) {
+        return (!kw || (r.project + r.task + r.content).indexOf(kw) > -1) && (!st || r.status === st);
+    });
+    document.getElementById('cnt').textContent = list.length;
+    document.getElementById('rows').innerHTML = list.map(function (r) {
+        var op = isMine
+            ? '<span class="link-btn" onclick="viewDetail(\'' + r.id + '\')">查看</span>'
+              + (r.status === '已答复' ? '<span class="link-btn" onclick="closeLoop(\'' + r.id + '\')">闭环</span>' : '<span class="link-btn muted" style="cursor:not-allowed">闭环</span>')
+            : '<span class="link-btn" onclick="viewDetail(\'' + r.id + '\')">查看</span>'
+              + (r.status === '待答复' ? '<span class="link-btn" onclick="reply(\'' + r.id + '\')">答复</span>' : '<span class="link-btn muted" style="cursor:not-allowed">已答复</span>');
+        return '<tr><td><b style="color:var(--text-primary)">' + r.project + '</b></td>'
+            + '<td>' + r.task + '</td><td>' + r.owner + '</td>'
+            + '<td class="fz13">' + r.content + '</td>'
+            + '<td>' + Util.statusTag(r.status) + '</td>'
+            + '<td class="fz13 secondary">' + (r.reply || '<span class="muted">—</span>') + '</td>'
+            + '<td><div class="actions">' + op + '</div></td></tr>';
+    }).join('');
+}
+
+function find(id) { return DATA.opinions[type].find(function (x) { return x.id === id; }); }
+function viewDetail(id) {
+    var r = find(id);
+    Page.modal({ title: '意见详情 · ' + r.id, width: 520, foot: false, body:
+        '<div class="form-row"><label>项目 / 任务</label><div class="fz13">' + r.project + ' · ' + r.task + '</div></div>'
+        + '<div class="form-row"><label>意见负责人</label><div class="fz13">' + r.owner + '</div></div>'
+        + '<div class="form-row"><label>意见内容</label><div class="opinion-bubble fz13" style="background:var(--bg-muted);padding:11px;border-radius:8px">' + r.content + '</div></div>'
+        + '<div class="form-row"><label>状态</label>' + Util.statusTag(r.status) + '</div>'
+        + '<div class="form-row mb-0"><label>回复内容</label><div class="fz13 secondary">' + (r.reply || '暂无回复') + '</div></div>' });
+}
+function reply(id) {
+    var r = find(id);
+    Page.modal({ title: '答复意见 · ' + r.id, width: 480, okText: '提交答复', body:
+        '<div class="form-row"><label>意见内容</label><div class="fz13" style="background:var(--bg-muted);padding:11px;border-radius:8px">' + r.content + '</div></div>'
+        + '<div class="form-row mb-0"><label>答复内容 <span class="req">*</span></label><textarea class="input" rows="4" placeholder="请输入答复..."></textarea></div>',
+        onOk: function () { Page.toast('答复已提交，等待提出人闭环', 'success'); } });
+}
+function closeLoop(id) { Page.confirm('确认对意见 <b>' + id + '</b> 进行闭环？', function () { Page.toast('意见已闭环', 'success'); }); }
+render();
+</script>
+</body>
+</html>

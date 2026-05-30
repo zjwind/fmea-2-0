@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>知识库</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb">知识库 / <b id="bc"></b></div>
+            <div class="page-title" id="ptitle"></div>
+        </div>
+        <button class="btn" id="topBtn" style="display:none"></button>
+    </div>
+    <div id="content"></div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+var type = Page.qs('type') || 'baseline';
+var meta = {
+    baseline: { name: '基线库', desc: '沉淀已落地的 DRBFM 基线，供后续项目复用与查询', icon: '📚' },
+    measure: { name: '措施库', desc: '沉淀失效对应的预防 / 探测 / 优化措施，与失效库一对多关联', icon: '🛠️' },
+    history: { name: '历史问题库', desc: '沉淀历史故障问题，供评估与功能分析阶段导入关联', icon: '🗂️' }
+}[type];
+document.getElementById('bc').textContent = meta.name;
+document.getElementById('ptitle').innerHTML = meta.name + ' <span class="sub">' + meta.desc + '</span>';
+
+/* 历史问题库给出可浏览的示例数据；基线库 / 措施库按文档要求"先预留" */
+if (type === 'history') {
+    var rows = [
+        ['GZ-2024-088', 'PB-101', '散热', '硬件', 'X7', '高负载下SoC降频', '增加散热铜箔，预留性能裕度'],
+        ['GZ-2023-211', 'PB-102', 'EMC', '硬件', 'X7', 'CAN通信偶发误码', '增加共模电感与TVS防护'],
+        ['GZ-2023-156', 'PB-103', '电源', '硬件', 'X6', '上电时序异常导致黑屏', '增加上电复位与时序约束']
+    ].map(function (r) {
+        return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td><span class="tag gray">' + r[2] + '</span></td><td>' + r[3] + '</td><td>' + r[4] + '</td><td class="fz13">' + r[5] + '</td><td class="fz13 secondary">' + r[6] + '</td></tr>';
+    }).join('');
+    document.getElementById('content').innerHTML = '<div class="card"><div class="toolbar">'
+        + '<div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input class="input" placeholder="搜索问题描述 / 型号"></div>'
+        + '<div class="spacer"></div><span class="fz13 muted">共 3 条</span></div>'
+        + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>故障单号</th><th>问题编号</th><th>类型</th><th>领域</th><th>型号</th><th>问题描述</th><th>解决方案</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+} else {
+    document.getElementById('content').innerHTML = '<div class="card"><div class="placeholder-box" style="padding:70px 20px">'
+        + '<div class="ico" style="font-size:52px">' + meta.icon + '</div>'
+        + '<div style="font-size:16px;color:var(--text-secondary);font-weight:600;margin-bottom:8px">' + meta.name + '建设中</div>'
+        + '<div class="fz13 muted" style="max-width:520px;margin:0 auto;line-height:1.7">' + meta.desc + '。<br>该模块字段结构与入库流程尚在规划，当前版本先行预留入口。基线落地跟踪完成后将自动重构入库，记录入库时间、来源项目、落地责任人。</div>'
+        + '</div></div>';
+}
+</script>
+</body>
+</html>

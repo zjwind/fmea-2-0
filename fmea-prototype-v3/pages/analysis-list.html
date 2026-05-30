@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>DRBFM分析任务</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb"><b>DRBFM分析任务</b></div>
+            <div class="page-title">DRBFM 分析任务 <span class="sub">结构分析 → 功能分析 → 失效分析 → 评审 → 审批</span></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="toolbar">
+            <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input class="input" id="kw" placeholder="搜索任务 / 项目" oninput="render()">
+            </div>
+            <select class="select" id="scope" onchange="render()">
+                <option value="mine">我负责的</option>
+                <option value="all">全部任务（管理员）</option>
+            </select>
+            <select class="select" id="st" onchange="render()">
+                <option value="">全部状态</option>
+                <option>结构分析</option><option>功能分析</option><option>失效分析</option>
+                <option>评审中</option><option>审批中</option><option>已完成</option>
+            </select>
+            <div class="spacer"></div>
+            <span class="fz13 muted">共 <b id="cnt"></b> 条</span>
+        </div>
+
+        <div class="tbl-wrap">
+            <table class="tbl">
+                <thead><tr>
+                    <th>任务名称</th><th>项目</th><th>TSE</th><th>PSE</th><th>当前阶段</th>
+                    <th style="width:140px">进度</th><th>开始时间</th><th>期望结束</th><th style="width:130px">操作</th>
+                </tr></thead>
+                <tbody id="rows"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+var stepsName = ['结构分析', '功能分析', '失效分析', '评审', '审批'];
+function render() {
+    var kw = document.getElementById('kw').value.trim();
+    var scope = document.getElementById('scope').value;
+    var st = document.getElementById('st').value;
+    var list = DATA.analysisTasks.filter(function (r) {
+        return (scope === 'all' || r.mine) && (!kw || (r.project + r.name).indexOf(kw) > -1) && (!st || r.status === st);
+    });
+    document.getElementById('cnt').textContent = list.length;
+    document.getElementById('rows').innerHTML = list.map(function (r) {
+        var pct = Math.round((r.stepIdx) / stepsName.length * 100);
+        if (r.status === '已完成') pct = 100;
+        return '<tr>'
+            + '<td><b style="color:var(--text-primary)">' + r.name + '</b></td>'
+            + '<td>' + r.project + '</td><td>' + r.tse + '</td><td>' + r.pse + '</td>'
+            + '<td>' + Util.statusTag(r.status) + '</td>'
+            + '<td><div class="progress ' + (pct === 100 ? 'green' : '') + '"><i style="width:' + pct + '%"></i></div><span class="fz12 muted">' + pct + '%</span></td>'
+            + '<td class="fz13 secondary">' + r.start + '</td><td class="fz13 secondary">' + r.due + '</td>'
+            + '<td><span class="link-btn" onclick="Page.nav(\'analysis-detail.html?id=' + r.id + '\',\'analysis\')">' + (r.status === '已完成' ? '查看' : '分析') + '</span></td>'
+            + '</tr>';
+    }).join('');
+}
+render();
+</script>
+</body>
+</html>

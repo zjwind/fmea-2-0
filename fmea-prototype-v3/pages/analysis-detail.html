@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>分析任务详情</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+.split { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
+.mini-list-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-muted); border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.mini-row { padding: 9px 12px; border-bottom: 1px solid var(--border-light); font-size: 13px; cursor: pointer; transition: background .15s; }
+.mini-row:hover { background: #fafbff; }
+.struct-canvas { background: linear-gradient(135deg,#f8f9ff,#eef0fe); border: 1px solid var(--border); border-radius: 12px; min-height: 460px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.node { position: absolute; padding: 10px 16px; border-radius: 10px; background: #fff; border: 2px solid var(--border); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-sm); }
+.node.H { border-color: var(--danger); background: var(--danger-light); color: #b91c1c; }
+.node.M { border-color: var(--warning); background: var(--warning-light); color: #b45309; }
+.node.L { border-color: var(--text-muted); }
+.feishu-embed { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.feishu-bar { background: #f6f7fb; border-bottom: 1px solid var(--border); padding: 8px 12px; font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+.matrix { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.matrix th, .matrix td { border: 1px solid var(--border); padding: 7px 8px; text-align: center; }
+.matrix th { background: var(--bg-muted); font-weight: 600; }
+.matrix .yx { color: var(--success); font-weight: 700; }
+.review-split { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; align-items: start; }
+.opinion-bubble { background: var(--bg-muted); border-radius: 10px; padding: 11px 13px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb"><span class="link-btn" style="color:var(--text-muted)" onclick="Page.nav('analysis-list.html','analysis')">DRBFM分析任务</span> / <b id="bcId"></b></div>
+            <div class="page-title" id="ptitle"></div>
+        </div>
+        <div class="flex gap-8" id="opBtns"></div>
+    </div>
+
+    <!-- 步骤进度 -->
+    <div class="steps" id="steps"></div>
+
+    <!-- 步骤内容 -->
+    <div id="stepBody"></div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+var id = Page.qs('id');
+var task = DATA.analysisTasks.find(function (t) { return t.id === id; }) || DATA.analysisTasks[0];
+var steps = ['结构分析', '功能分析', '失效分析', '评审', '审批'];
+var cur = parseInt(Page.qs('step') || task.stepIdx || 0, 10);
+if (task.status === '已完成') cur = 4;
+
+document.getElementById('bcId').textContent = task.id;
+document.getElementById('ptitle').innerHTML = task.name + ' <span class="sub">' + task.project + ' · TSE ' + task.tse + ' / PSE ' + task.pse + '</span>';
+
+function renderSteps() {
+    document.getElementById('steps').innerHTML = steps.map(function (s, i) {
+        var cls = i < cur ? 'done' : i === cur ? 'active' : '';
+        return '<div class="step ' + cls + '" onclick="goStep(' + i + ')" style="cursor:pointer"><div class="step-node"><div class="step-num">' + (i < cur ? '✓' : (i + 1)) + '</div>'
+            + '<div class="step-label">' + s + '</div></div>' + (i < steps.length - 1 ? '<div class="step-line"></div>' : '') + '</div>';
+    }).join('');
+}
+function goStep(i) { cur = i; renderSteps(); renderBody(); renderOps(); }
+
+/* ===== 顶部操作按钮（随步骤变化） ===== */
+function renderOps() {
+    var b = '';
+    if (cur === 0) b = '<button class="btn btn-sm" onclick="addPart()">+ 添加部件</button>'
+        + '<button class="btn btn-sm" onclick="addFunc()">+ 添加功能</button>'
+        + '<button class="btn btn-sm" onclick="Page.toast(\'请选择结构图文件上传\')">导入结构图</button>'
+        + '<button class="btn btn-ai btn-sm" onclick="Page.toast(\'已从飞书画板同步部件及功能\',\'success\')">⚡ 从飞书画板同步</button>';
+    else if (cur === 1) b = '<button class="btn btn-ai btn-sm" onclick="Page.toast(\'AI 已从附件补充功能并按丰度排序\',\'success\')">⚡ AI 补充功能</button>';
+    else if (cur === 2) b = '<button class="btn btn-ai btn-sm" onclick="aiGen()">⚡ AI 生成失效分析</button>'
+        + '<button class="btn btn-sm" onclick="Page.toast(\'已调用后端接口生成 SOD 评分\',\'success\')">SOD 评分</button>';
+    document.getElementById('opBtns').innerHTML = b + '<button class="btn btn-sm" onclick="Page.nav(\'analysis-list.html\',\'analysis\')">返回列表</button>';
+}
+
+/* ===== 步骤一：结构分析 ===== */
+function tplStruct() {
+    var parts = DATA.parts.map(function (p) {
+        return '<div class="mini-row"><div class="flex justify-between items-center"><b>' + p.name + '</b>'
+            + (p.changed ? '<span class="tag orange">变更</span>' : '<span class="tag gray">无变更</span>') + '</div>'
+            + '<div class="fz12 muted" style="margin-top:3px">' + p.pid + (p.note ? ' · ' + p.note : '') + '</div></div>';
+    }).join('');
+    var funcs = DATA.functions.map(function (f) {
+        return '<div class="mini-row"><div class="flex justify-between items-center"><span>' + f.name + '</span>' + Util.riskCell(f.risk) + '</div>'
+            + '<div class="fz12 muted" style="margin-top:3px">' + f.p1 + ' ↔ ' + f.p2 + ' · <span class="tag gray" style="height:18px">' + f.type + '</span></div></div>';
+    }).join('');
+    return '<div class="split">'
+        + '<div><div class="tbl-wrap mb-16"><div class="mini-list-head">部件列表 <span class="fz12 muted">' + DATA.parts.length + '</span></div>' + parts + '</div>'
+        + '<div class="tbl-wrap"><div class="mini-list-head">功能列表 <span class="fz12 muted">' + DATA.functions.length + '</span></div>' + funcs + '</div></div>'
+        + '<div class="card tight" style="padding:16px"><div class="card-head" style="margin-bottom:12px"><div class="h"><span class="bar"></span>结构框图（飞书画板）</div>'
+        + '<span class="fz12 muted">红=H 黄=M 灰=L · 物理黑/物质蓝/能量绿/信号紫</span></div>'
+        + '<div class="struct-canvas">'
+        + '<div class="node H" style="top:40px;left:50%;transform:translateX(-50%)">主控SoC (H)</div>'
+        + '<div class="node M" style="top:160px;left:14%">DDR内存 (M)</div>'
+        + '<div class="node M" style="top:160px;right:14%">CAN收发器 (M)</div>'
+        + '<div class="node L" style="bottom:50px;left:24%">电源PMIC (L)</div>'
+        + '<div class="node L" style="bottom:50px;right:24%">显示LVDS (L)</div>'
+        + '<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none" stroke-width="2" fill="none">'
+        + '<line x1="50%" y1="80" x2="22%" y2="160" stroke="#22c55e"/><line x1="50%" y1="80" x2="78%" y2="170" stroke="#7c5cff"/>'
+        + '<line x1="50%" y1="80" x2="30%" y2="380" stroke="#22c55e"/><line x1="50%" y1="80" x2="70%" y2="380" stroke="#7c5cff"/></svg>'
+        + '</div>'
+        + '<div class="flex justify-between mt-16"><span class="fz13 muted">交付物类型：结构框图（飞书文档画板节点）</span>'
+        + '<button class="btn btn-primary" onclick="goStep(1)">下一步：功能分析 →</button></div></div></div>';
+}
+
+/* ===== 步骤二：功能分析（功能矩阵 / 飞书表格嵌入） ===== */
+function tplFunc() {
+    var devices = ['主控SoC', 'DDR内存', 'CAN收发器', '电源PMIC', '显示LVDS'];
+    var fmFuncs = [
+        { n: '提供主控运算能力', risk: 'H', y: [0, 1] },
+        { n: '传输CAN总线信号', risk: 'M', y: [2, 0] },
+        { n: '供应稳定电源', risk: 'M', y: [3, 0] },
+        { n: '驱动显示输出', risk: 'L', y: [4, 0] }
+    ];
+    var head = '<tr><th style="text-align:left;min-width:160px">功能 \\ 器件</th>' + devices.map(function (d) { return '<th>' + d + '</th>'; }).join('') + '<th>风险</th></tr>';
+    var rows = fmFuncs.map(function (f) {
+        var cells = devices.map(function (d, i) { return '<td>' + (f.y.indexOf(i) > -1 ? '<span class="yx">Y</span>' : '') + '</td>'; }).join('');
+        var bg = f.risk === 'H' ? 'background:var(--danger-light)' : f.risk === 'M' ? 'background:var(--warning-light)' : '';
+        return '<tr style="' + bg + '"><td style="text-align:left">' + f.n + '</td>' + cells + '<td>' + Util.riskCell(f.risk) + '</td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>功能矩阵表</div>'
+        + '<div class="flex gap-8"><button class="btn btn-sm" onclick="Page.toast(\'已导入历史问题 / 技术要求 / 需求分析附件\')">导入附件</button>'
+        + '<button class="btn btn-ai btn-sm" onclick="Page.toast(\'AI 已补充功能并按接口丰度排序\',\'success\')">⚡ AI 补充功能</button></div></div>'
+        + '<p class="fz13 secondary">器件（节点）为横轴、功能（边）为纵轴，关联单元标记 Y；H/M 风险标记颜色。用户可在飞书表格中直接编辑。</p>'
+        + '<div class="feishu-embed mt-12"><div class="feishu-bar">📊 飞书表格 · X9主控板功能矩阵.sheet <span style="margin-left:auto;color:var(--success)">● 实时协同编辑中</span></div>'
+        + '<div style="padding:14px;overflow-x:auto"><table class="matrix">' + head + rows + '</table></div></div>'
+        + '<div class="flex justify-between mt-16"><span class="fz13 muted">功能按丰度（关联接口数量）排序</span>'
+        + '<button class="btn btn-primary" onclick="confirmFunc()">下一步：生成失效分析表 →</button></div></div>';
+}
+
+/* ===== 步骤三：失效分析 ===== */
+function tplFailure() {
+    var rows = DATA.failures.map(function (f) {
+        return '<div class="card" style="margin-bottom:12px"><div class="flex justify-between items-center mb-12">'
+            + '<div class="flex items-center gap-10"><b style="color:var(--text-primary)">' + f.func + '</b>'
+            + '<span class="tag ' + (f.source === 'AI生成' ? 'blue' : 'gray') + '">' + f.source + '</span>'
+            + '<span class="cell-risk ' + f.ap + '">AP ' + f.ap + '</span></div>'
+            + '<div class="flex gap-8 fz12 secondary"><span>S <b>' + f.s + '</b></span><span>O <b>' + f.o + '</b></span><span>D <b>' + f.d + '</b></span></div></div>'
+            + '<div class="grid-2 fz13"><div><span class="muted">失效模式：</span>' + f.mode + '</div>'
+            + '<div><span class="muted">失效原因：</span>' + f.cause + '</div>'
+            + '<div><span class="muted">失效影响：</span>' + f.effect + '</div>'
+            + '<div><span class="muted">探测措施：</span>' + f.detect + '</div>'
+            + '<div style="grid-column:1/3"><span class="muted">预防措施：</span>' + f.prevent + '</div></div></div>';
+    }).join('');
+    return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>失效分析记录 <span class="fz12 muted">（含失效模式 / 原因 / 探测 / 优化措施 / SOD 评分）</span></div>'
+        + '<div class="flex gap-8"><button class="btn btn-ai btn-sm" onclick="aiGen()">⚡ AI 生成</button>'
+        + '<button class="btn btn-sm" onclick="Page.toast(\'已调用后端接口完成 SOD 评分与 AP 判定\',\'success\')">SOD 评分</button></div></div>'
+        + '<p class="fz13 secondary">AI 读取功能矩阵中变更相关功能，生成失效模式、原因、预防措施至临时表；用户采纳后写入在线表。SOD 评分由后端接口计算，AI 给出建议值可修改。</p></div>'
+        + '<div id="failList">' + rows + '</div>'
+        + '<div class="flex justify-end mt-8"><button class="btn btn-primary" onclick="goStep(3)">下一步：发起评审 →</button></div>';
+}
+
+/* ===== 步骤四：评审 ===== */
+var reviewStarted = (cur >= 3 && task.status !== '结构分析' && task.status !== '功能分析' && task.status !== '失效分析');
+function tplReview() {
+    if (!reviewStarted) {
+        var rows = DATA.reviewers.map(function (r) {
+            return '<tr><td><div class="flex items-center gap-8"><div class="user-avatar" style="width:26px;height:26px;font-size:11px">' + r.name.charAt(0) + '</div>' + r.name + '</div></td>'
+                + '<td><span class="tag blue">' + r.role + '</span></td><td><span class="link-btn danger">移除</span></td></tr>';
+        }).join('');
+        return '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>发起评审</div>'
+            + '<button class="btn btn-sm" onclick="addReviewer()">+ 添加评审人</button></div>'
+            + '<div class="flex items-center gap-10 mb-16"><span class="fz13 secondary">失效分析表：</span><span class="link-btn" onclick="Page.toast(\'打开失效分析表\')">点击查看 ↗</span></div>'
+            + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>评审人</th><th>评审角色</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+            + '<div class="flex justify-end mt-16"><button class="btn btn-primary btn-lg" onclick="startReview()">发起评审</button></div></div>';
+    }
+    // 评审详情
+    var opinionList = DATA.reviewers.filter(function (r) { return r.opinion; }).map(function (r) {
+        return '<div class="opinion-bubble"><div class="flex justify-between"><b class="fz13">' + r.name + ' · ' + r.role + '</b><span class="tag green">' + r.result + '</span></div>'
+            + '<div class="fz13 mt-8">' + r.opinion + '</div></div>';
+    }).join('');
+    var passN = DATA.reviewers.filter(function (r) { return r.result === '通过'; }).length;
+    return '<div class="review-split">'
+        + '<div><div class="card"><div class="card-head"><div class="h"><span class="bar"></span>提交评审意见</div></div>'
+        + '<textarea class="input" rows="3" placeholder="请输入评审意见..."></textarea>'
+        + '<div class="flex justify-end gap-8 mt-12"><button class="btn btn-danger" onclick="reviewResult(\'不通过\')">不通过</button>'
+        + '<button class="btn btn-success" onclick="reviewResult(\'通过\')">通过</button></div></div>'
+        + '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>评审进度</div>'
+        + '<span class="tag blue">' + passN + '/' + DATA.reviewers.length + ' 已评审</span></div>'
+        + DATA.reviewers.map(function (r) {
+            return '<div class="flex items-center gap-8" style="padding:8px 0;border-bottom:1px solid var(--border-light)">'
+                + '<div class="user-avatar" style="width:26px;height:26px;font-size:11px">' + r.name.charAt(0) + '</div>'
+                + '<span class="fz13">' + r.name + '</span><span class="tag gray">' + r.role + '</span>'
+                + '<span style="margin-left:auto">' + (r.result === '通过' ? '<span class="tag green">通过</span>' : r.result === '不通过' ? '<span class="tag red">不通过</span>' : '<span class="tag orange">待评审</span>') + '</span></div>';
+        }).join('')
+        + '<div class="fz12 muted mt-12">评审到期未处理将自动判为不通过；全部评审后系统邮件通知发起人。</div></div></div>'
+        + '<div><div class="card"><div class="card-head"><div class="h"><span class="bar"></span>失效分析表 / 基线清单</div>'
+        + '<span class="link-btn" onclick="Page.toast(\'在新窗口打开失效分析表\')">展开 ↗</span></div>'
+        + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>失效模式</th><th>S</th><th>O</th><th>D</th><th>AP</th></tr></thead><tbody>'
+        + DATA.failures.map(function (f) { return '<tr><td>' + f.mode + '</td><td>' + f.s + '</td><td>' + f.o + '</td><td>' + f.d + '</td><td>' + Util.riskCell(f.ap) + '</td></tr>'; }).join('')
+        + '</tbody></table></div></div>'
+        + '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>评审意见</div></div>' + (opinionList || '<div class="empty"><div class="t">暂无意见</div></div>')
+        + '<div class="divider"></div><div class="flex justify-between items-center"><span class="fz13 secondary">全部通过后可上传/生成会议纪要</span>'
+        + '<button class="btn btn-primary" onclick="finishReview()">完成评审 · 进入审批 →</button></div></div></div></div>';
+}
+
+/* ===== 步骤五：审批 ===== */
+function tplApproval() {
+    return '<div class="grid-2">'
+        + '<div><div class="card"><div class="card-head"><div class="h"><span class="bar"></span>失效分析要点</div></div>'
+        + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>失效模式</th><th>AP</th><th>关键措施</th></tr></thead><tbody>'
+        + DATA.failures.map(function (f) { return '<tr><td>' + f.mode + '</td><td>' + Util.riskCell(f.ap) + '</td><td class="fz13">' + f.prevent + '</td></tr>'; }).join('')
+        + '</tbody></table></div></div>'
+        + '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>基线清单</div></div>'
+        + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>措施</th><th>类型</th><th>落地</th><th>负责人</th></tr></thead><tbody>'
+        + DATA.measures.map(function (m) { return '<tr><td class="fz13">' + m.content + '</td><td><span class="tag gray">' + m.type + '</span></td><td>' + (m.land ? '<span class="tag green">是</span>' : '<span class="tag gray">否</span>') + '</td><td>' + (m.owner || '—') + '</td></tr>'; }).join('')
+        + '</tbody></table></div></div></div>'
+        + '<div><div class="card"><div class="card-head"><div class="h"><span class="bar"></span>评审会议纪要</div></div>'
+        + '<div class="fz13" style="line-height:1.8;color:var(--text-regular)">本次 DRBFM 评审针对 X9 主控板共识别 4 项失效模式，其中高风险（AP=H）2 项。评审组一致同意散热与 EMC 防护措施，要求补充供应商质量数据。意见已全部闭环，评审结论：<b style="color:var(--success)">通过</b>。</div>'
+        + '<div class="fz12 muted mt-12">AI 生成 · 2026-06-15 16:30</div></div>'
+        + '<div class="card"><div class="card-head"><div class="h"><span class="bar"></span>发起审批</div></div>'
+        + '<div class="dim-card" style="background:var(--primary-light);border-color:var(--primary);margin-bottom:14px">'
+        + '<div class="fz13"><b>审批层级提示</b></div><div class="fz13 secondary mt-8">· 初级变更 → 专业组长审批<br>· 中级变更 → 部门经理审批<br>· 重大变更 → 技术总监审批</div></div>'
+        + '<div class="form-row"><label>选择审批人 <span class="req">*</span></label>'
+        + '<select class="select" style="width:100%"><option>孙磊 · 专业组长（初级变更）</option><option>刘洋 · 部门经理（中级变更）</option><option>王总 · 技术总监（重大变更）</option></select></div>'
+        + (task.status === '审批中'
+            ? '<div class="card-head"><div class="h fz13">审批意见</div></div><textarea class="input" rows="2" placeholder="请输入审批意见"></textarea>'
+              + '<div class="flex justify-end gap-8 mt-12"><button class="btn btn-danger" onclick="approve(false)">不通过</button><button class="btn btn-success" onclick="approve(true)">审批通过</button></div>'
+            : '<div class="flex justify-end mt-8"><button class="btn btn-primary btn-lg" onclick="startApproval()">发起审批</button></div>')
+        + '</div></div></div>';
+}
+
+function renderBody() {
+    var fn = [tplStruct, tplFunc, tplFailure, tplReview, tplApproval][cur];
+    document.getElementById('stepBody').innerHTML = fn();
+}
+
+/* ===== 交互 ===== */
+function addPart() { Page.modal({ title: '添加部件', width: 460, body:
+    '<div class="form-row"><label>部件ID <span class="req">*</span></label><input class="input" placeholder="如 P06"></div>'
+    + '<div class="form-row"><label>部件名称 <span class="req">*</span></label><input class="input"></div>'
+    + '<div class="form-row"><label>是否变更</label><select class="select"><option>是</option><option>否</option></select></div>'
+    + '<div class="form-row"><label>变更点说明</label><textarea class="input" rows="2"></textarea></div>',
+    onOk: function () { Page.toast('部件已添加', 'success'); } }); }
+function addFunc() { Page.modal({ title: '添加功能', width: 460, body:
+    '<div class="form-row"><label>功能名称 <span class="req">*</span></label><input class="input" placeholder="动词+名称"></div>'
+    + '<div class="grid-2"><div class="form-row"><label>关联部件1</label><select class="select"><option>主控SoC</option><option>DDR内存</option></select></div>'
+    + '<div class="form-row"><label>关联部件2</label><select class="select"><option>CAN收发器</option><option>电源PMIC</option></select></div></div>'
+    + '<div class="form-row"><label>功能类型</label><select class="select"><option>物理</option><option>物质</option><option>能量</option><option>信号</option></select></div>',
+    onOk: function () { Page.toast('功能已添加', 'success'); } }); }
+function confirmFunc() { Page.confirm('确认功能矩阵表并生成失效分析表？', function () { Page.toast('失效分析表已生成', 'success'); goStep(2); }); }
+function aiGen() { Page.toast('AI 正在生成失效模式 / 原因 / 措施...', 'info'); setTimeout(function () { Page.toast('AI 生成完成，已写入临时表待采纳', 'success'); }, 800); }
+function addReviewer() { Page.modal({ title: '添加评审人', width: 440, body:
+    '<div class="form-row"><label>评审角色 <span class="req">*</span></label><select class="select"><option>专业组长</option><option>PSE</option><option>硬件质量经理</option><option>DFX SE</option><option>维护代表</option><option>软件/固件工程师</option></select></div>'
+    + '<div class="form-row"><label>评审人 <span class="req">*</span></label><select class="select"><option>孙磊</option><option>周婷</option><option>吴昊</option><option>郑爽</option></select></div>',
+    onOk: function () { Page.toast('已添加评审人', 'success'); } }); }
+function startReview() { Page.confirm('确认发起评审？将通知所有评审人。', function () { reviewStarted = true; renderBody(); Page.toast('评审已发起', 'success'); }); }
+function reviewResult(r) { Page.toast('评审结论已提交：' + r, r === '通过' ? 'success' : 'warning'); }
+function finishReview() { Page.confirm('所有评审人已通过，确认完成评审并进入审批？', function () { Page.toast('会议纪要已生成，进入审批', 'success'); goStep(4); }); }
+function startApproval() { Page.confirm('确认发起审批？将通知所选审批人。', function () { Page.toast('审批已发起', 'success'); }); }
+function approve(ok) {
+    if (ok) Page.confirm('确认审批通过？通过后流程结束并生成基线跟踪任务。', function () { Page.toast('审批通过，任务完成', 'success'); });
+    else Page.confirm('确认审批不通过？将退回发起人。', function () { Page.toast('已退回发起人', 'warning'); });
+}
+
+renderSteps(); renderBody(); renderOps();
+</script>
+</body>
+</html>

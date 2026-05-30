@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>首页</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="breadcrumb"><b>首页</b></div>
+            <div class="page-title">工作台 <span class="sub">早上好，张明，今日有 5 项待办</span></div>
+        </div>
+        <div class="flex gap-8">
+            <select class="select" id="scope" onchange="render()">
+                <option value="me">我负责的</option>
+                <option value="all">全部项目</option>
+            </select>
+            <button class="btn btn-primary" onclick="Page.nav('eval-list.html?level=system','eval-system')">前往评估任务</button>
+        </div>
+    </div>
+
+    <!-- 一级指标卡 -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="ico" style="background:var(--primary-light);color:var(--primary)">📋</div>
+            <div class="val">7</div><div class="lbl">进行中评估任务</div>
+            <div class="trend up">▲ 较上周 +2</div>
+        </div>
+        <div class="stat-card">
+            <div class="ico" style="background:var(--warning-light);color:var(--warning)">🔬</div>
+            <div class="val">5</div><div class="lbl">进行中分析任务</div>
+            <div class="trend up">▲ 较上周 +1</div>
+        </div>
+        <div class="stat-card">
+            <div class="ico" style="background:var(--danger-light);color:var(--danger)">💬</div>
+            <div class="val">3</div><div class="lbl">待我处理的评审意见</div>
+            <div class="trend down">▼ 较上周 -1</div>
+        </div>
+        <div class="stat-card">
+            <div class="ico" style="background:var(--success-light);color:#15803d">✅</div>
+            <div class="val">12</div><div class="lbl">本月完成基线措施</div>
+            <div class="trend up">▲ 落地率 86%</div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <!-- 待办（渐进式披露：点击展开明细） -->
+        <div class="card">
+            <div class="card-head"><div class="h"><span class="bar"></span>我的待办</div>
+                <span class="link-btn" onclick="Page.nav('opinion-list.html?type=todo','opinion-todo')">查看全部</span></div>
+            <div id="todo-list"></div>
+        </div>
+
+        <!-- 任务进度分布 -->
+        <div class="card">
+            <div class="card-head"><div class="h"><span class="bar"></span>分析任务阶段分布</div>
+                <span class="link-btn" onclick="Page.nav('analysis-list.html','analysis')">前往</span></div>
+            <div id="stage-bars"></div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <!-- 风险概览 -->
+        <div class="card">
+            <div class="card-head"><div class="h"><span class="bar"></span>风险等级分布（AP）</div></div>
+            <div class="flex gap-16" style="align-items:stretch">
+                <div class="text-center" style="flex:1;padding:14px;background:var(--danger-light);border-radius:10px">
+                    <div style="font-size:30px;font-weight:700;color:var(--danger)">18</div>
+                    <div class="fz13 secondary mt-8">高风险 H</div>
+                </div>
+                <div class="text-center" style="flex:1;padding:14px;background:var(--warning-light);border-radius:10px">
+                    <div style="font-size:30px;font-weight:700;color:#b45309">34</div>
+                    <div class="fz13 secondary mt-8">中风险 M</div>
+                </div>
+                <div class="text-center" style="flex:1;padding:14px;background:var(--bg-muted);border-radius:10px">
+                    <div style="font-size:30px;font-weight:700;color:var(--text-secondary)">56</div>
+                    <div class="fz13 secondary mt-8">低风险 L</div>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="fz13 secondary">高风险失效项需在评审前完成预防/探测措施闭环，当前 <b style="color:var(--danger)">3</b> 项措施未落地。</div>
+        </div>
+
+        <!-- 最近动态 -->
+        <div class="card">
+            <div class="card-head"><div class="h"><span class="bar"></span>最近动态</div></div>
+            <div id="feed"></div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/page.js"></script>
+<script>
+function render() {
+    // 待办
+    var todos = [
+        { t: 'X9 主控板散热措施缺少量化指标', meta: '评审意见 · 待答复', tag: 'red', go: function(){Page.nav('opinion-list.html?type=todo','opinion-todo');} },
+        { t: 'B7 系统级评估表待 PSE 审核', meta: '系统级评估 · 待审核', tag: 'orange', go: function(){Page.nav('eval-list.html?level=system','eval-system');} },
+        { t: 'X9 主控板 DRBFM 失效分析待 SOD 评分', meta: '分析任务 · 进行中', tag: 'blue', go: function(){Page.nav('analysis-detail.html?id=AN-2026-001','analysis');} },
+        { t: 'AD5 感知融合 DRBFM 等待您评审', meta: '评审 · 待评审', tag: 'orange', go: function(){Page.nav('analysis-detail.html?id=AN-2026-002&step=3','analysis');} },
+        { t: 'C3 网关 DRBFM 审批待处理', meta: '审批 · 待审批', tag: 'red', go: function(){Page.nav('analysis-detail.html?id=AN-2026-004&step=4','analysis');} }
+    ];
+    document.getElementById('todo-list').innerHTML = todos.map(function (x) {
+        return '<div class="flex items-center gap-10" style="padding:11px 0;border-bottom:1px solid var(--border-light);cursor:pointer" onclick="(' + x.go + ')()">'
+            + '<span class="badge-dot risk-' + (x.tag === 'red' ? 'H' : x.tag === 'orange' ? 'M' : 'L') + '"></span>'
+            + '<div style="flex:1"><div class="fz13" style="color:var(--text-primary)">' + x.t + '</div>'
+            + '<div class="fz12 muted mt-8" style="margin-top:3px">' + x.meta + '</div></div>'
+            + '<span class="tag ' + x.tag + '">去处理</span></div>';
+    }).join('');
+
+    // 阶段分布
+    var stages = [['结构分析', 1, 'var(--primary)'], ['功能分析', 0, 'var(--primary)'], ['失效分析', 1, 'var(--warning)'], ['评审', 1, 'var(--warning)'], ['审批', 1, 'var(--danger)'], ['已完成', 1, 'var(--success)']];
+    var maxv = 2;
+    document.getElementById('stage-bars').innerHTML = stages.map(function (s) {
+        var w = Math.max(s[1] / maxv * 100, 4);
+        return '<div class="flex items-center gap-10" style="margin:11px 0"><span class="fz13 secondary" style="width:64px">' + s[0] + '</span>'
+            + '<div class="progress" style="flex:1"><i style="width:' + w + '%;background:' + s[2] + '"></i></div>'
+            + '<span class="fz13 fw600" style="width:24px;text-align:right">' + s[1] + '</span></div>';
+    }).join('');
+
+    // 动态
+    var feeds = [
+        ['李伟', '审核通过了 B7 系统级评估表', '10 分钟前'],
+        ['王芳', '提交了 AD5 感知融合失效分析', '1 小时前'],
+        ['系统', 'X9 主控板 DRBFM 触发结论：必须分析（H）', '3 小时前'],
+        ['孙磊', '在 X9 评审中提出 1 条意见', '昨天 17:20'],
+        ['张明', '完成了 X9 显示驱动 DRBFM 审批', '昨天 09:10']
+    ];
+    document.getElementById('feed').innerHTML = feeds.map(function (f) {
+        return '<div class="flex gap-10" style="padding:10px 0;border-bottom:1px solid var(--border-light)">'
+            + '<div class="user-avatar" style="width:28px;height:28px;font-size:12px">' + f[0].charAt(0) + '</div>'
+            + '<div style="flex:1"><div class="fz13"><b style="color:var(--text-primary)">' + f[0] + '</b> ' + f[1] + '</div>'
+            + '<div class="fz12 muted" style="margin-top:2px">' + f[2] + '</div></div></div>';
+    }).join('');
+}
+render();
+</script>
+</body>
+</html>
