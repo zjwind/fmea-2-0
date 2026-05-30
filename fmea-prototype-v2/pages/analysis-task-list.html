@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../css/custom.css">
+</head>
+<body class="aac">
+<div class="aac-page">
+    <div class="aac-page-title">
+        <span class="title-bar"></span>
+        DRBFM分析任务
+    </div>
+
+    <div class="aac-card" style="background:var(--primary-light);border-color:var(--primary);margin-bottom:16px;padding:12px 20px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--primary-dark);">
+            <span>👤</span>
+            <span>当前角色：<strong>TSE</strong> — 显示所有分析任务（管理员可查看全部，其他角色仅显示自己负责的任务）</span>
+        </div>
+    </div>
+
+    <div class="aac-search-bar">
+        <input type="text" placeholder="搜索任务名称...">
+        <select style="width:140px;">
+            <option value="">全部状态</option>
+            <option value="draft">草稿</option>
+            <option value="in-progress">进行中</option>
+            <option value="completed">已完成</option>
+        </select>
+        <button class="aac-btn aac-btn-primary">搜索</button>
+        <button class="aac-btn aac-btn-secondary">重置</button>
+    </div>
+
+    <div class="aac-card" style="padding:0;overflow:hidden;">
+        <table class="aac-table">
+            <thead>
+                <tr>
+                    <th>任务名称</th>
+                    <th>TSE</th>
+                    <th>PSE</th>
+                    <th>状态</th>
+                    <th>开始时间</th>
+                    <th>期望结束时间</th>
+                    <th>当前步骤</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="task-list"></tbody>
+        </table>
+    </div>
+
+    <div class="aac-pagination">
+        <span class="page-info">共 4 条</span>
+        <button class="page-btn active">1</button>
+    </div>
+</div>
+
+<script src="../js/mock-data.js"></script>
+<script>
+(function () {
+    var tasks = MockData.get('analysisTasks');
+    var tbody = document.getElementById('task-list');
+    var statusMap = {
+        'draft': '<span class="aac-badge aac-badge-draft">草稿</span>',
+        'in-progress': '<span class="aac-badge aac-badge-in-progress">进行中</span>',
+        'completed': '<span class="aac-badge aac-badge-completed">已完成</span>'
+    };
+    var stepNames = ['结构分析', '功能分析', '失效分析', '评审', '审批'];
+
+    tasks.forEach(function (t) {
+        var stepLabel = t.currentStep > 0 && t.currentStep <= stepNames.length
+            ? '<span class="aac-tag aac-tag-primary">' + stepNames[t.currentStep - 1] + '</span>'
+            : (t.status === 'completed' ? '<span class="aac-tag aac-tag-success">已完成</span>' : '<span class="aac-tag">未开始</span>');
+
+        var ops = '<button class="aac-btn aac-btn-link" onclick="parent.App.openPage(\'分析详情\',\'pages/analysis-detail.html\',\'analysis-detail\')">分析</button>';
+
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td>' + t.taskName + '</td>' +
+            '<td>' + t.tse + '</td>' +
+            '<td>' + t.pse + '</td>' +
+            '<td>' + (statusMap[t.status] || t.status) + '</td>' +
+            '<td>' + t.startTime + '</td>' +
+            '<td>' + t.expectedEndTime + '</td>' +
+            '<td>' + stepLabel + '</td>' +
+            '<td>' + ops + '</td>';
+        tbody.appendChild(tr);
+    });
+})();
+</script>
+</body>
+</html>

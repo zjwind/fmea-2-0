@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FMEA 2.0 / DRBFM全生命周期管理平台</title>
+    <link rel="stylesheet" href="css/custom.css">
+</head>
+<body class="aac">
+
+<div class="aac-header">
+    <div class="logo-area">
+        <div class="logo-icon">F</div>
+        <div>
+            <div class="system-title">FMEA 2.0 / DRBFM全生命周期管理平台</div>
+            <div class="system-subtitle">Design Review Based on Failure Mode</div>
+        </div>
+    </div>
+    <div class="user-area">
+        <div class="user-info">
+            <div class="user-avatar">张</div>
+            <span>张三 | TSE</span>
+        </div>
+        <button class="btn-logout" onclick="App.showModal('退出确认', '确定要退出系统吗？', function(){ window.location.reload(); })">退出</button>
+    </div>
+</div>
+
+<div class="aac-layout">
+    <div class="aac-sidebar">
+        <nav class="aac-nav" id="aac-nav"></nav>
+    </div>
+    <div class="aac-main">
+        <div class="aac-tabs" id="aac-tabs"></div>
+        <div class="aac-content" id="aac-content"></div>
+    </div>
+</div>
+
+<script src="js/mock-data.js"></script>
+<script src="js/common.js"></script>
+<script>App.init();</script>
+
+</body>
+</html>
