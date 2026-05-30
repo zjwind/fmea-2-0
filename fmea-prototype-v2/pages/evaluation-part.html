@@ -77,8 +77,8 @@
     };
 
     tasks.forEach(function (t) {
-        var ops = '<button class="aac-btn aac-btn-link" onclick="alert(\'进入评估页面（含指派协作人）\')">评估</button>';
-        ops += '<button class="aac-btn aac-btn-link" onclick="alert(\'查看详情\')">查看详情</button>';
+        var ops = '<button class="aac-btn aac-btn-link" onclick="parent.App.openPage(\'部件级评估详情\',\'pages/evaluation-detail-part.html\',\'eval-detail-part\')">评估</button>';
+        ops += '<button class="aac-btn aac-btn-link" onclick="parent.App.openPage(\'部件级评估详情\',\'pages/evaluation-detail-part.html\',\'eval-detail-part\')">查看详情</button>';
         if (t.canSkip) {
             ops += '<button class="aac-btn aac-btn-link" style="color:var(--warning);" onclick="alert(\'跳过操作（仅PM权限）\')">跳过</button>';
         }

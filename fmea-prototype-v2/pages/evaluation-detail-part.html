@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../css/custom.css">
+    <style>
+        .eval-change-table { width: 100%; border-collapse: collapse; }
+        .eval-change-table th, .eval-change-table td { border: 1px solid var(--border-color); padding: 8px 12px; font-size: 12px; text-align: left; }
+        .eval-change-table th { background: var(--primary-light); color: var(--primary-dark); font-weight: 600; white-space: nowrap; }
+        .eval-change-table .level-0 { background: #eef0fe; font-weight: 700; }
+        .eval-change-table .level-1 { padding-left: 28px; background: #f8f9fb; }
+        .eval-change-table .level-2 { padding-left: 48px; }
+        .eval-change-table .changed { color: var(--danger); font-weight: 500; }
+        .eval-change-table .imn-tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .imn-I { background: #dcfce7; color: #16a34a; }
+        .imn-M { background: #fef3c7; color: #d97706; }
+        .imn-N { background: #fee2e2; color: #dc2626; }
+        .five-dim-eval { width: 100%; border-collapse: collapse; }
+        .five-dim-eval th, .five-dim-eval td { border: 1px solid var(--border-color); padding: 8px 10px; font-size: 12px; text-align: center; }
+        .five-dim-eval th { background: var(--primary-light); color: var(--primary-dark); font-weight: 600; }
+        .five-dim-eval .dim-name { background: var(--gray-50); font-weight: 600; text-align: left; width: 120px; }
+        .five-dim-eval .weight { color: var(--text-secondary); font-size: 11px; }
+        .five-dim-eval .risk-col { width: 60px; }
+        .five-dim-eval .option-cell { padding: 4px 6px; }
+        .five-dim-eval .option-cell label { display: flex; align-items: center; gap: 2px; font-size: 11px; cursor: pointer; }
+        .five-dim-eval .score-cell { font-weight: 700; font-size: 14px; }
+        .score-H { color: #ef4444; }
+        .score-M { color: #f59e0b; }
+        .score-L { color: #22c55e; }
+        .eval-summary-bar { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 16px; }
+        .eval-summary-bar .summary-item { text-align: center; }
+        .eval-summary-bar .summary-value { font-size: 20px; font-weight: 700; }
+        .eval-summary-bar .summary-label { font-size: 11px; color: var(--text-secondary); }
+        .history-table { width: 100%; border-collapse: collapse; }
+        .history-table th, .history-table td { border: 1px solid var(--border-color); padding: 8px 12px; font-size: 12px; text-align: left; }
+        .history-table th { background: var(--primary-light); color: var(--primary-dark); font-weight: 600; }
+        .collaborator-card { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius); margin-bottom: 8px; background: var(--bg-surface); }
+        .collaborator-card .collab-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+        .collaborator-card .collab-info { flex: 1; }
+        .collaborator-card .collab-name { font-size: 13px; font-weight: 600; }
+        .collaborator-card .collab-scope { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .collaborator-card .collab-remove { cursor: pointer; color: var(--gray-500); font-size: 16px; transition: var(--transition); }
+        .collaborator-card .collab-remove:hover { color: var(--danger); }
+    </style>
+</head>
+<body class="aac">
+<div class="aac-page">
+    <div class="aac-page-title">
+        <span class="title-bar"></span>
+        部件级评估任务详情
+        <span style="font-size:13px;font-weight:400;color:var(--text-secondary);margin-left:8px;">CloudEngine S12700E — 主控板部件级DRBFM评估</span>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert('保存当前内容')">💾 保存</button>
+        <button class="aac-btn aac-btn-ghost aac-btn-sm">🔄 刷新</button>
+        <button class="aac-btn aac-btn-ghost aac-btn-sm" onclick="alert('撤回修改')">↩ 撤回</button>
+    </div>
+
+    <div id="step-progress-container"></div>
+
+    <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--bg-surface);border-radius:var(--radius);padding:4px;border:1px solid var(--border-color);" id="step-tabs"></div>
+
+    <div id="step-panels">
+        <div id="panel-import" class="step-panel"></div>
+        <div id="panel-review" class="step-panel" style="display:none;"></div>
+        <div id="panel-history" class="step-panel" style="display:none;"></div>
+        <div id="panel-five-dim" class="step-panel" style="display:none;"></div>
+        <div id="panel-confirm" class="step-panel" style="display:none;"></div>
+    </div>
+</div>
+
+<script src="../js/mock-data.js"></script>
+<script>
+(function () {
+    var currentStep = 0;
+    var steps = ['导入变更清单', 'PSE审核', '提交历史问题', '五维风险评估', '评分确认'];
+
+    document.getElementById('step-progress-container').innerHTML = parent.App.buildStepProgress(steps, currentStep);
+
+    var tabsContainer = document.getElementById('step-tabs');
+    steps.forEach(function (s, i) {
+        var btn = document.createElement('button');
+        btn.className = 'aac-btn aac-btn-sm' + (i === currentStep ? ' aac-btn-primary' : (i < currentStep ? ' aac-btn-secondary' : ' aac-btn-ghost'));
+        if (i < currentStep) btn.style.cssText = 'border-color:var(--success);color:var(--success);';
+        btn.textContent = s;
+        btn.style.flex = '1';
+        btn.onclick = function () { showStep(i); };
+        tabsContainer.appendChild(btn);
+    });
+
+    function showStep(idx) {
+        var panels = ['panel-import', 'panel-review', 'panel-history', 'panel-five-dim', 'panel-confirm'];
+        panels.forEach(function (p, i) {
+            document.getElementById(p).style.display = i === idx ? 'block' : 'none';
+        });
+        var btns = tabsContainer.querySelectorAll('.aac-btn');
+        btns.forEach(function (b, i) {
+            b.className = 'aac-btn aac-btn-sm';
+            if (i === idx) b.className += ' aac-btn-primary';
+            else if (i < currentStep) { b.className += ' aac-btn-secondary'; b.style.cssText = 'border-color:var(--success);color:var(--success);'; }
+            else b.className += ' aac-btn-ghost';
+        });
+    }
+
+    renderImport();
+    renderReview();
+    renderHistory();
+    renderFiveDim();
+    renderConfirm();
+
+    function renderImport() {
+        var html = '';
+
+        html += '<div class="aac-card" style="background:#fef3c7;border-color:#f59e0b;margin-bottom:16px;padding:12px 20px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#92400e;">';
+        html += '<span>📌</span>';
+        html += '<span><strong>部件级差异说明：</strong>与系统级评估流程基本一致，但在导入变更清单时多了一项<strong>指派协作人</strong>的选项。TSE可单方面指派协作人，指派后协作人自动获得对应变更点的编辑权限。不需要指派的协作人进行签核。</span>';
+        html += '</div></div>';
+
+        html += '<div class="eval-summary-bar">';
+        html += '<div class="summary-item"><div class="summary-value">15</div><div class="summary-label">变更点总数</div></div>';
+        html += '<div class="summary-item"><div class="summary-value" style="color:#ef4444;">5</div><div class="summary-label">高风险项</div></div>';
+        html += '<div class="summary-item"><div class="summary-value" style="color:#f59e0b;">4</div><div class="summary-label">中风险项</div></div>';
+        html += '<div class="summary-item"><div class="summary-value" style="color:#9aa0a6;">6</div><div class="summary-label">低风险项</div></div>';
+        html += '<div style="margin-left:auto;display:flex;gap:8px;">';
+        html += '<button class="aac-btn aac-btn-secondary aac-btn-sm">📥 导入变更清单</button>';
+        html += '<button class="aac-btn aac-btn-secondary aac-btn-sm">📥 导入质量策划</button>';
+        html += '<button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'自动匹配\')">🔄 自动匹配</button>';
+        html += '</div></div>';
+
+        html += '<div class="aac-split-layout">';
+        html += '<div class="aac-split-left" style="width:340px;">';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">协作人管理 <div class="title-actions"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'指派协作人，指定后给予变更点清单编辑权限\')">+ 指派协作人</button></div></div>';
+        html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">TSE可单方面指派协作人，指派后协作人自动获得对应变更点的编辑权限</div>';
+
+        var collaborators = [
+            { name: '李四', scope: '主控板子系统、交换网板子系统', avatar: '李' },
+            { name: '王五', scope: '接口板子系统', avatar: '王' },
+            { name: '赵六', scope: '电源子系统', avatar: '赵' }
+        ];
+
+        collaborators.forEach(function (c) {
+            html += '<div class="collaborator-card">';
+            html += '<div class="collab-avatar">' + c.avatar + '</div>';
+            html += '<div class="collab-info"><div class="collab-name">' + c.name + '</div><div class="collab-scope">负责范围：' + c.scope + '</div></div>';
+            html += '<span class="collab-remove" onclick="alert(\'移除协作人\')">×</span>';
+            html += '</div>';
+        });
+
+        html += '</div></div>';
+
+        html += '<div class="aac-split-right">';
+
+        html += '<div class="aac-card" style="padding:0;overflow:hidden;">';
+        html += '<div class="aac-toolbar"><span class="toolbar-title">变更点清单</span><span style="font-size:12px;color:var(--text-secondary);">共 15 条变更点</span></div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table class="eval-change-table">';
+        html += '<thead><tr><th>Level</th><th>ID</th><th>系统/部件名称</th><th>开发类别</th><th>I/M/N</th><th>变更点</th><th>协作人</th><th>质量策划匹配</th></tr></thead>';
+        html += '<tbody>';
+
+        var changes = [
+            { level: 1, id: '1.1', name: '主控板子系统', dev: 'MODIFY', imn: 'M', change: '主控板CPU升级至ARM A72架构', collab: '李四', match: 'CPU架构切换风险策划' },
+            { level: 2, id: '1.1.1', name: '主控板PCB', dev: 'MODIFY', imn: 'M', change: 'PCB层数从12层增加到16层', collab: '李四', match: '' },
+            { level: 2, id: '1.1.2', name: '主控板散热模组', dev: 'MODIFY', imn: 'M', change: '散热片尺寸增大20%', collab: '李四', match: '散热设计变更策划' },
+            { level: 1, id: '1.2', name: '交换网板子系统', dev: 'MODIFY', imn: 'M', change: '交换芯片带宽升级至25.6Tbps', collab: '李四', match: '交换芯片升级策划' },
+            { level: 2, id: '1.2.1', name: '交换芯片', dev: 'NEW', imn: 'I', change: '采用新一代SDN交换芯片', collab: '李四', match: '新芯片导入策划' },
+            { level: 1, id: '1.3', name: '接口板子系统', dev: 'NEW', imn: 'N', change: '新增400GE QSFP-DD接口板', collab: '王五', match: '400GE接口风险策划指南' },
+            { level: 0, id: '2', name: '电源子系统', dev: 'MODIFY', imn: 'M', change: '电源模块从1500W升级至3000W', collab: '赵六', match: '电源功率升级策划' },
+            { level: 1, id: '2.1', name: 'AC电源模块', dev: 'MODIFY', imn: 'M', change: '功率密度提升，散热结构重新设计', collab: '赵六', match: '电源散热设计策划' }
+        ];
+
+        changes.forEach(function (c) {
+            var levelCls = 'level-' + c.level;
+            var imnCls = 'imn-' + c.imn;
+            var changeCls = c.change ? 'changed' : '';
+            var matchContent = c.match ? '<span style="color:var(--success);">' + c.match + '</span>' : '<span style="color:var(--gray-400);">未匹配</span>';
+            var collabContent = c.collab ? '<span class="aac-tag aac-tag-primary">' + c.collab + '</span>' : '';
+
+            html += '<tr>';
+            html += '<td class="' + levelCls + '">' + c.level + '</td>';
+            html += '<td class="' + levelCls + '">' + c.id + '</td>';
+            html += '<td class="' + levelCls + '">' + c.name + '</td>';
+            html += '<td><span class="aac-tag ' + (c.dev === 'NEW' ? 'aac-tag-danger' : 'aac-tag-warning') + '">' + c.dev + '</span></td>';
+            html += '<td><span class="imn-tag ' + imnCls + '">' + c.imn + '</span></td>';
+            html += '<td class="' + changeCls + '">' + c.change + '</td>';
+            html += '<td>' + collabContent + '</td>';
+            html += '<td>' + matchContent + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div></div>';
+
+        html += '</div></div>';
+
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'TSE确认提交，任务转PSE审核\')">确认提交 → 转PSE审核</button>';
+        html += '</div>';
+
+        document.getElementById('panel-import').innerHTML = html;
+    }
+
+    function renderReview() {
+        var html = '<div class="aac-split-layout">';
+        html += '<div class="aac-split-left" style="width:400px;">';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">审核信息</div>';
+        html += '<ul class="aac-info-list">';
+        html += '<li><span class="info-label">提交人</span><span class="info-value">张三（TSE）</span></li>';
+        html += '<li><span class="info-label">提交时间</span><span class="info-value">2026-02-05 10:00</span></li>';
+        html += '<li><span class="info-label">提交次数</span><span class="info-value">1</span></li>';
+        html += '<li><span class="info-label">审核人</span><span class="info-value">李四（PSE）</span></li>';
+        html += '<li><span class="info-label">协作人</span><span class="info-value">李四、王五、赵六</span></li>';
+        html += '<li><span class="info-label">审核状态</span><span class="info-value"><span class="aac-badge aac-badge-pending">待审核</span></span></li>';
+        html += '</ul></div>';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">PSE审核操作</div>';
+        html += '<div style="margin-bottom:12px;"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">审核意见</label>';
+        html += '<textarea placeholder="请输入审核意见..." style="width:100%;height:100px;resize:vertical;"></textarea></div>';
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button class="aac-btn aac-btn-primary" style="flex:1;" onclick="alert(\'审核通过\')">✓ 审核通过</button>';
+        html += '<button class="aac-btn aac-btn-danger" style="flex:1;" onclick="alert(\'审核不通过\')">✕ 审核不通过</button>';
+        html += '</div></div>';
+
+        html += '</div>';
+
+        html += '<div class="aac-split-right">';
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">变更点清单预览</div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table class="eval-change-table">';
+        html += '<thead><tr><th>ID</th><th>系统/部件名称</th><th>变更点</th><th>协作人</th></tr></thead>';
+        html += '<tbody>';
+        var items = [
+            { id: '1.1', name: '主控板子系统', change: '主控板CPU升级至ARM A72架构', collab: '李四' },
+            { id: '1.2', name: '交换网板子系统', change: '交换芯片带宽升级至25.6Tbps', collab: '李四' },
+            { id: '1.3', name: '接口板子系统', change: '新增400GE QSFP-DD接口板', collab: '王五' },
+            { id: '2', name: '电源子系统', change: '电源模块从1500W升级至3000W', collab: '赵六' }
+        ];
+        items.forEach(function (c) {
+            html += '<tr><td>' + c.id + '</td><td>' + c.name + '</td><td class="changed">' + c.change + '</td><td><span class="aac-tag aac-tag-primary">' + c.collab + '</span></td></tr>';
+        });
+        html += '</tbody></table></div></div>';
+        html += '</div></div>';
+
+        document.getElementById('panel-review').innerHTML = html;
+    }
+
+    function renderHistory() {
+        var html = '';
+
+        html += '<div class="aac-card" style="background:var(--primary-light);border-color:var(--primary);margin-bottom:16px;padding:12px 20px;">';
+        html += '<div style="font-size:12px;color:var(--primary-dark);line-height:1.8;">';
+        html += '<strong>说明：</strong>部件级评估任务的历史问题会读取系统级评估任务的历史问题（自动关联），TSE也可额外导入部件级相关的历史问题。';
+        html += '</div></div>';
+
+        html += '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+        html += '<button class="aac-btn aac-btn-primary aac-btn-sm">📥 导入历史问题</button>';
+        html += '<button class="aac-btn aac-btn-secondary aac-btn-sm">📚 从历史问题库选择</button>';
+        html += '<button class="aac-btn aac-btn-ghost aac-btn-sm" onclick="alert(\'读取系统级评估任务的历史问题\')">📋 读取系统级历史问题</button>';
+        html += '</div>';
+
+        html += '<div class="aac-card" style="padding:0;overflow:hidden;">';
+        html += '<div class="aac-toolbar"><span class="toolbar-title">历史问题列表</span><span style="font-size:12px;color:var(--text-secondary);">系统级 4 条 + 部件级 2 条 = 共 6 条</span></div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table class="history-table">';
+        html += '<thead><tr><th>来源</th><th>故障单号</th><th>问题类型</th><th>涉及领域</th><th>问题描述</th><th>解决方案</th></tr></thead>';
+        html += '<tbody>';
+        var issues = [
+            { source: '系统级', faultNo: 'FT-2024-0156', type: '设计缺陷', domain: '散热', desc: '主控板高温下复位', solution: '增加散热片面积，提高热保护阈值' },
+            { source: '系统级', faultNo: 'FT-2024-0289', type: '信号完整性', domain: '高速接口', desc: '光模块识别异常', solution: '优化I2C总线信号完整性设计' },
+            { source: '系统级', faultNo: 'FT-2025-0034', type: '电源问题', domain: '电源', desc: '电源模块输出纹波超标', solution: '更换低ESR滤波电容' },
+            { source: '系统级', faultNo: 'FT-2025-0078', type: '射频问题', domain: '无线', desc: 'WiFi6E 6GHz频段吞吐量下降', solution: '更换宽带滤波器' },
+            { source: '部件级', faultNo: 'FT-2025-0112', type: '制造问题', domain: 'PCB', desc: '主控板BGA焊接虚焊', solution: '优化回流焊温度曲线' },
+            { source: '部件级', faultNo: 'FT-2025-0145', type: '设计缺陷', domain: '散热', desc: '主控板散热片接触不良', solution: '增加导热硅脂涂覆面积' }
+        ];
+        issues.forEach(function (iss) {
+            var sourceTag = iss.source === '系统级' ? '<span class="aac-tag aac-tag-primary">系统级</span>' : '<span class="aac-tag aac-tag-warning">部件级</span>';
+            html += '<tr><td>' + sourceTag + '</td><td>' + iss.faultNo + '</td><td><span class="aac-tag aac-tag-warning">' + iss.type + '</span></td><td>' + iss.domain + '</td><td style="max-width:200px;">' + iss.desc + '</td><td style="max-width:200px;">' + iss.solution + '</td></tr>';
+        });
+        html += '</tbody></table></div></div>';
+
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'提交历史问题，生成DRBFM评估表\')">提交历史问题 → 生成评估表</button>';
+        html += '</div>';
+
+        document.getElementById('panel-history').innerHTML = html;
+    }
+
+    function renderFiveDim() {
+        var html = '';
+
+        html += '<div class="aac-card" style="background:var(--primary-light);border-color:var(--primary);margin-bottom:16px;padding:12px 20px;">';
+        html += '<div style="font-size:12px;color:var(--primary-dark);line-height:1.8;">';
+        html += '<strong>五维评估说明：</strong>对LEVEL=0的项目进行五维评估，每个维度有多个选项（高/中/低），五维评分必须手填。填完后点击"风险评分"按钮生成风险综合评分。<br>';
+        html += '<strong>计算公式：</strong>风险综合评分 = 技术新颖性×15% + 影响范围×30% + 失效严重度×30% + 变更复杂度×20% + 历史问题×5%<br>';
+        html += '<strong>部件级合并规则：</strong>保留系统级（LEVEL=0）的评估内容，更新部件级评估内容，按行ID匹配——已有评估内容的保留，否则新增。';
+        html += '</div></div>';
+
+        html += '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'风险评分计算\')">📊 风险评分</button>';
+        html += '<button class="aac-btn aac-btn-secondary" onclick="alert(\'AI生成建议\')">🤖 AI生成建议</button>';
+        html += '</div>';
+
+        html += '<div class="aac-card" style="padding:0;overflow:hidden;">';
+        html += '<div class="aac-toolbar"><span class="toolbar-title">DRBFM触发评估表（五维评估）</span><span style="font-size:12px;color:var(--text-secondary);">LEVEL=0 项目</span></div>';
+        html += '<div style="overflow-x:auto;padding:0 4px 4px;">';
+        html += '<table class="five-dim-eval">';
+        html += '<thead><tr><th>评估维度</th><th>权重</th><th>高风险选项</th><th>中风险选项</th><th>低风险选项</th><th>风险等级</th><th>评分</th></tr></thead>';
+        html += '<tbody>';
+
+        var dims = [
+            { name: '技术新颖性', weight: '15%', hOpts: ['采用全新技术架构', '无任何历史经验参考', '行业首创技术方案'], mOpts: ['部分技术有参考案例', '核心技术有积累但应用场景不同'], lOpts: ['成熟技术新应用', '有充分的历史经验'] },
+            { name: '影响范围', weight: '30%', hOpts: ['影响多个子系统', '涉及核心业务链路', '跨产品平台影响'], mOpts: ['影响单一子系统', '仅影响辅助功能'], lOpts: ['影响范围可控', '仅影响非关键路径'] },
+            { name: '失效严重度', weight: '30%', hOpts: ['可能导致人身安全风险', '法规不符合产品无法上市', '核心功能完全丧失'], mOpts: ['核心功能严重降级', '辅助功能丧失'], lOpts: ['辅助功能轻微降级', '外观或非功能性问题'] },
+            { name: '变更复杂度', weight: '20%', hOpts: ['涉及多专业交叉变更', '变更接口数量超过10个', '需协调3个以上团队'], mOpts: ['涉及2个专业变更', '变更接口数量5-10个'], lOpts: ['单一专业变更', '变更接口数量少于5个'] },
+            { name: '历史问题', weight: '5%', hOpts: ['同类产品曾发生严重失效', '有未关闭的严重历史问题', '历史问题复现风险高'], mOpts: ['有中等严重度历史问题', '历史问题已有临时措施'], lOpts: ['无相关历史问题', '历史问题已彻底解决'] }
+        ];
+
+        dims.forEach(function (dim, idx) {
+            var rowSpan = Math.max(dim.hOpts.length, dim.mOpts.length, dim.lOpts.length);
+            html += '<tr>';
+            html += '<td class="dim-name" rowspan="' + rowSpan + '">' + dim.name + '</td>';
+            html += '<td class="weight" rowspan="' + rowSpan + '">' + dim.weight + '</td>';
+
+            for (var r = 0; r < rowSpan; r++) {
+                if (r > 0) html += '<tr>';
+                html += '<td class="option-cell">' + (dim.hOpts[r] ? '<label><input type="checkbox"> ' + dim.hOpts[r] + '</label>' : '') + '</td>';
+                html += '<td class="option-cell">' + (dim.mOpts[r] ? '<label><input type="checkbox"> ' + dim.mOpts[r] + '</label>' : '') + '</td>';
+                html += '<td class="option-cell">' + (dim.lOpts[r] ? '<label><input type="checkbox"> ' + dim.lOpts[r] + '</label>' : '') + '</td>';
+                if (r === 0) {
+                    html += '<td class="risk-col" rowspan="' + rowSpan + '"><span class="aac-risk aac-risk-M">M</span></td>';
+                    html += '<td class="score-cell" rowspan="' + rowSpan + '">7</td>';
+                }
+                html += '</tr>';
+            }
+        });
+
+        html += '<tr style="background:var(--gray-50);font-weight:700;">';
+        html += '<td class="dim-name">风险综合评分</td>';
+        html += '<td>100%</td>';
+        html += '<td colspan="3" style="text-align:left;font-size:12px;">风险综合评分 = 技术新颖性×15% + 影响范围×30% + 失效严重度×30% + 变更复杂度×20% + 历史问题×5%</td>';
+        html += '<td><span class="aac-risk aac-risk-M">M</span></td>';
+        html += '<td class="score-cell" style="font-size:18px;">6.85</td>';
+        html += '</tr>';
+
+        html += '</tbody></table></div></div>';
+
+        html += '<div class="aac-card" style="margin-top:16px;">';
+        html += '<div class="card-title">评估结论</div>';
+        html += '<div class="aac-form-row">';
+        html += '<div class="aac-form-group"><label>DRBFM触发评估建议</label><div class="form-value" style="color:#f59e0b;font-weight:600;">建议进行DRBFM分析（风险综合评分5-8分）</div></div>';
+        html += '<div class="aac-form-group"><label>最终DRBFM触发结论</label>';
+        html += '<select style="margin-top:4px;"><option>必须进行DRBFM分析</option><option selected>建议进行DRBFM分析</option><option>可以不进行DRBFM分析</option></select>';
+        html += '</div></div>';
+        html += '<div class="aac-form-row">';
+        html += '<div class="aac-form-group"><label>建议及理由</label><textarea style="width:100%;height:60px;resize:vertical;margin-top:4px;">该项目部件级风险综合评分为6.85分，属于中风险等级。主要风险来源为主控板CPU架构切换和交换芯片升级，建议进行DRBFM分析。</textarea></div>';
+        html += '</div></div>';
+
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'进入评分确认步骤\')">下一步 → 评分确认</button>';
+        html += '</div>';
+
+        document.getElementById('panel-five-dim').innerHTML = html;
+    }
+
+    function renderConfirm() {
+        var html = '';
+
+        html += '<div class="eval-summary-bar">';
+        html += '<div class="summary-item"><div class="summary-value" style="color:#f59e0b;">6.85</div><div class="summary-label">风险综合评分</div></div>';
+        html += '<div class="summary-item"><div><span class="aac-risk aac-risk-M" style="font-size:14px;">M</span></div><div class="summary-label">风险等级</div></div>';
+        html += '<div class="summary-item"><div class="summary-value" style="color:#f59e0b;">建议进行DRBFM分析</div><div class="summary-label">DRBFM触发结论</div></div>';
+        html += '</div>';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">五维评估复核</div>';
+        html += '<table class="aac-table">';
+        html += '<thead><tr><th>评估维度</th><th>权重</th><th>风险等级</th><th>评分</th><th>加权得分</th><th>复核状态</th></tr></thead>';
+        html += '<tbody>';
+        var dimData = [
+            { name: '技术新颖性', weight: '15%', risk: 'M', score: 7, weighted: '1.05' },
+            { name: '影响范围', weight: '30%', risk: 'M', score: 7, weighted: '2.10' },
+            { name: '失效严重度', weight: '30%', risk: 'M', score: 7, weighted: '2.10' },
+            { name: '变更复杂度', weight: '20%', risk: 'M', score: 6, weighted: '1.20' },
+            { name: '历史问题', weight: '5%', risk: 'L', score: 4, weighted: '0.20' }
+        ];
+        dimData.forEach(function (d) {
+            var riskCls = d.risk === 'H' ? 'aac-risk-H' : (d.risk === 'M' ? 'aac-risk-M' : 'aac-risk-L');
+            html += '<tr><td style="font-weight:500;">' + d.name + '</td><td>' + d.weight + '</td><td><span class="aac-risk ' + riskCls + '">' + d.risk + '</span></td><td style="text-align:center;font-weight:700;">' + d.score + '</td><td style="text-align:center;">' + d.weighted + '</td><td><span class="aac-badge aac-badge-approved">已完成</span></td></tr>';
+        });
+        html += '<tr style="background:var(--gray-50);font-weight:700;"><td>合计</td><td>100%</td><td><span class="aac-risk aac-risk-M">M</span></td><td style="text-align:center;">—</td><td style="text-align:center;font-size:16px;">6.85</td><td><span class="aac-badge aac-badge-approved">全部完成</span></td></tr>';
+        html += '</tbody></table></div>';
+
+        html += '<div class="aac-card" style="margin-top:16px;">';
+        html += '<div class="card-title">确认操作</div>';
+        html += '<div class="aac-form-section" style="margin-bottom:0;">';
+        html += '<div class="aac-form-row">';
+        html += '<div class="aac-form-group"><label>TSE确认（张三）</label>';
+        html += '<div style="margin-top:8px;display:flex;align-items:center;gap:12px;">';
+        html += '<button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'TSE确认\')">确认</button>';
+        html += '<span style="font-size:12px;color:var(--text-secondary);">请确认评分评估表完整性后点击确认</span>';
+        html += '</div></div>';
+        html += '<div class="aac-form-group"><label>PSE确认（李四）</label>';
+        html += '<div style="margin-top:8px;display:flex;align-items:center;gap:12px;">';
+        html += '<button class="aac-btn aac-btn-secondary aac-btn-sm" disabled>待TSE确认</button>';
+        html += '<span style="font-size:12px;color:var(--text-secondary);">需TSE先确认</span>';
+        html += '</div></div>';
+        html += '</div></div></div>';
+
+        html += '<div class="aac-card" style="margin-top:16px;">';
+        html += '<div class="card-title">生成DRBFM分析任务</div>';
+        html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">PSE和TSE均确认后，可根据评估结论生成DRBFM分析任务。系统将检查评估表单完整性。</div>';
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button class="aac-btn aac-btn-primary" disabled>✓ 确认生成DRBFM分析任务</button>';
+        html += '<button class="aac-btn aac-btn-secondary" onclick="alert(\'撤回评估表修改\')">↩ 撤回修改</button>';
+        html += '</div></div>';
+
+        document.getElementById('panel-confirm').innerHTML = html;
+    }
+})();
+</script>
+</body>
+</html>
