@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../css/custom.css">
+<style>
+body{background:var(--bg-app);font-family:var(--font-family)}
+.step-bar{display:flex;align-items:center;justify-content:center;padding:14px 0;background:var(--bg-surface);border-radius:var(--radius-lg);margin-bottom:12px;box-shadow:var(--shadow-sm);flex-wrap:wrap;gap:2px}
+.step-item{display:flex;align-items:center;font-size:12px;color:var(--gray-500);padding:4px 8px;border-radius:4px;transition:all .2s}
+.step-item .step-num{width:26px;height:26px;border-radius:50%;background:var(--gray-300);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-right:6px;flex-shrink:0;transition:all .2s}
+.step-item.active .step-num{background:var(--primary);box-shadow:0 2px 8px rgba(79,110,247,.35)}
+.step-item.active{color:var(--primary);font-weight:700}
+.step-item.done .step-num{background:var(--success)}
+.step-item.done{color:var(--success)}
+.step-item.disabled{color:var(--gray-400)}
+.step-arrow{color:var(--gray-300);font-size:14px;margin:0 2px}
+.step-content{background:var(--bg-surface);border-radius:var(--radius-lg);padding:16px;min-height:500px;box-shadow:var(--shadow-sm)}
+.step-panel{display:none}
+.step-panel.active{display:block}
+.nav-bar{display:flex;justify-content:space-between;margin-top:12px}
+.nav-bar .btn-group{display:flex;gap:8px}
+.section-title{font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--primary)}
+.info-box{padding:12px 16px;border-radius:var(--radius);margin:10px 0;font-size:13px;line-height:1.8}
+.info-box-green{background:#e6f4ea;border:1px solid #b7eb8f;color:#1e7e34}
+.info-box-blue{background:#eef0fe;border:1px solid #b3d4fc;color:#3b56d9}
+.info-box-yellow{background:#fff8e1;border:1px solid #ffe082;color:#856404}
+.dim-section{border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.dim-header{background:var(--gray-50);padding:8px 14px;font-weight:700;font-size:13px;border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center}
+.dim-body{padding:10px 14px}
+.dim-group{margin-bottom:10px}
+.dim-group-title{font-weight:700;font-size:12px;color:var(--primary);margin-bottom:6px;padding:3px 8px;background:var(--primary-light);border-radius:3px;display:inline-block}
+.dim-option-row{display:flex;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid var(--gray-100)}
+.dim-option-row:last-child{border-bottom:none}
+.dim-option-text{flex:1;padding-right:12px;color:var(--gray-700)}
+.dim-radio-group{display:flex;gap:20px;min-width:180px;justify-content:center}
+.dim-radio-group label{cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;color:var(--gray-600)}
+.dim-radio-group label:hover{color:var(--primary)}
+.risk-tag{display:inline-block;padding:3px 12px;border-radius:3px;font-weight:700;font-size:13px;color:#fff}
+.risk-H{background:var(--danger)}
+.risk-M{background:var(--warning);color:var(--gray-800)}
+.risk-L{background:var(--gray-400);color:#fff}
+.score-formula{background:#f0f7ff;border:1px solid #b3d4fc;border-radius:var(--radius);padding:12px 16px;margin:12px 0;font-size:13px;line-height:2}
+.score-formula .hl{color:var(--primary);font-weight:700}
+.eval-item-card{border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.eval-item-header{background:var(--gray-50);padding:10px 14px;font-weight:700;font-size:13px;border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center}
+.eval-item-body{padding:12px 14px}
+.score-row{display:flex;align-items:center;margin-bottom:6px;font-size:13px}
+.score-row .label{width:110px;text-align:right;margin-right:10px;color:var(--gray-600)}
+.score-row .value{font-weight:700;color:var(--gray-800)}
+.score-row .weight{color:var(--gray-500);font-size:12px;margin-left:4px}
+.conclusion-row{display:flex;align-items:center;margin-bottom:8px;font-size:13px}
+.conclusion-row .label{width:130px;text-align:right;margin-right:10px;color:var(--gray-600);flex-shrink:0}
+.validation-error{background:#fff5f5;border:1px solid #ffc9c9;border-radius:var(--radius);padding:8px 12px;margin:6px 0;font-size:12px;color:var(--danger)}
+.match-yes{color:var(--success);font-weight:700}
+.match-no{color:var(--danger);font-weight:700}
+.eval-table-wrap{background:var(--bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:12px}
+.eval-table-scroll{overflow:auto;max-height:calc(100vh - 340px)}
+#evalTable{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content}
+#evalTable th,#evalTable td{border-right:1px solid #d0d7de;border-bottom:1px solid #d0d7de;padding:4px 6px;text-align:center;vertical-align:middle}
+#evalTable thead tr:first-child th{border-top:1px solid #d0d7de}
+#evalTable th:first-child,#evalTable td:first-child{border-left:1px solid #d0d7de}
+#evalTable th{background:#eef0fe;color:#3b56d9;font-weight:600;position:sticky;top:0;z-index:10}
+#evalTable thead tr:nth-child(2) th{top:32px}
+#evalTable thead tr:nth-child(3) th{top:64px}
+.sticky-col{position:sticky!important;z-index:20!important}
+thead .sticky-col{z-index:30!important}
+.corner-cell{z-index:40!important}
+.level-0 td{background:#fff}
+.level-1 td{background:#e3f2fd}
+.level-2 td{background:#f5f5f5}
+.level-0 .sticky-col{background:#fff!important}
+.level-1 .sticky-col{background:#e3f2fd!important}
+.level-2 .sticky-col{background:#f5f5f5!important}
+thead .sticky-col{background:#eef0fe!important}
+.dim-hdr{background:#1a237e!important;color:#fff!important;font-size:13px;font-weight:700;letter-spacing:1px}
+.group-high{background:#dc2626!important;color:#fff!important;font-weight:700;font-size:11px}
+.group-mid{background:#ef6c00!important;color:#fff!important;font-weight:700;font-size:11px}
+.group-low{background:#616161!important;color:#fff!important;font-weight:700;font-size:11px}
+.opt-header{background:#f0f4f8!important;color:#37474f!important;font-size:10px;font-weight:500;white-space:normal!important;word-wrap:break-word;word-break:break-all;line-height:1.25;min-width:58px;max-width:68px}
+.opt-header.dim-start{border-left:2px solid #90caf9!important}
+.dim-start{border-left:2px solid #90caf9!important}
+.score-start{border-left:2px solid #90caf9!important}
+.result-start{border-left:2px solid #90caf9!important}
+.opt-cell{padding:2px 3px!important;min-width:58px}
+.opt-cell .radio-wrap{display:flex;justify-content:center;align-items:center;gap:4px;flex-wrap:nowrap}
+.opt-cell label{font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:1px;margin:0;line-height:1}
+.opt-cell input[type="radio"]{margin:0;padding:0;width:11px;height:11px;vertical-align:middle;cursor:pointer}
+.score-col-header{background:#eef0fe!important;color:#3b56d9!important;font-weight:600;font-size:10px;min-width:42px}
+.result-col-header{background:#eef0fe!important;color:#3b56d9!important;font-weight:600;font-size:11px;min-width:80px}
+.score-cell{min-width:42px;font-weight:600;font-size:12px}
+.result-cell{min-width:80px;font-size:11px;text-align:left;white-space:normal;word-wrap:break-word}
+.result-cell select{width:100%;font-size:11px;padding:1px 2px;border:1px solid #ced4da;border-radius:3px;background:#fff;font-family:var(--font-family)}
+.risk-badge{display:inline-block;padding:2px 12px;border-radius:3px;font-weight:700;font-size:12px;letter-spacing:1px}
+.risk-badge-H{background:#ef4444;color:#fff}
+.risk-badge-M{background:#f59e0b;color:#333}
+.risk-badge-L{background:#9ca3af;color:#fff}
+.score-high{color:#dc2626}
+.score-mid{color:#ef6c00}
+.score-low{color:#16a34a}
+.score-zero{color:#9e9e9e}
+.eval-summary{background:var(--bg-surface);border-radius:var(--radius-lg);padding:20px 24px;margin-top:12px;box-shadow:var(--shadow-sm)}
+.summary-title{font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--primary)}
+.summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.summary-dim-card{border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;text-align:center}
+.summary-dim-card .dim-name{font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+.summary-dim-card .dim-score{font-size:24px;font-weight:700}
+.summary-dim-card .dim-weight{font-size:11px;color:var(--gray-500);margin-top:2px}
+.summary-dim-card .dim-weighted{font-size:13px;font-weight:600;color:var(--primary);margin-top:4px}
+.summary-total{display:flex;align-items:center;justify-content:center;gap:24px;padding:16px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200)}
+.summary-total .total-label{font-size:14px;font-weight:600;color:var(--gray-700)}
+.summary-total .total-score{font-size:28px;font-weight:700;color:var(--primary)}
+.summary-conclusion{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.conclusion-item{display:flex;align-items:flex-start;gap:8px}
+.conclusion-item .clabel{font-size:12px;color:var(--gray-600);min-width:120px;text-align:right;flex-shrink:0;padding-top:4px}
+.conclusion-item .cvalue{font-size:13px;color:var(--gray-800);flex:1}
+.conclusion-item .cvalue select{width:100%;max-width:280px;padding:4px 8px;border:1px solid #ced4da;border-radius:3px;font-size:12px;font-family:var(--font-family)}
+.conclusion-item .cvalue textarea{width:100%;max-width:400px;height:60px;padding:4px 8px;border:1px solid #ced4da;border-radius:3px;font-size:12px;resize:vertical;font-family:var(--font-family)}
+.last-sticky{box-shadow:4px 0 8px rgba(0,0,0,.08)}
+.change-table{width:100%;border-collapse:collapse}
+.change-table th,.change-table td{border:1px solid var(--border-color);padding:8px 12px;font-size:12px;text-align:left}
+.change-table th{background:var(--primary-light);color:var(--primary-dark);font-weight:600;white-space:nowrap}
+.change-table .level-0{background:#eef0fe;font-weight:700}
+.change-table .level-1{padding-left:28px;background:#f8f9fb}
+.change-table .level-2{padding-left:48px}
+.change-table .changed{color:var(--danger);font-weight:500}
+.imn-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.imn-I{background:#dcfce7;color:#16a34a}
+.imn-M{background:#fef3c7;color:#d97706}
+.imn-N{background:#fee2e2;color:#dc2626}
+</style>
+</head>
+<body>
+<div style="padding:12px;">
+<div class="step-bar" id="stepBar"></div>
+<div class="step-content" id="stepContent"></div>
+<div class="nav-bar">
+<div class="btn-group">
+<button class="aac-btn aac-btn-secondary aac-btn-sm" id="btnPrev" onclick="prevStep()">← 上一步</button>
+</div>
+<div class="btn-group">
+<span id="stepInfo" style="line-height:30px;font-size:13px;color:var(--gray-500);margin-right:10px"></span>
+<button class="aac-btn aac-btn-primary aac-btn-sm" id="btnNext" onclick="nextStep()">下一步 →</button>
+</div>
+</div>
+</div>
+
+<script>
+var steps = [
+{name:'变更点清单导入'},
+{name:'质量策划导入'},
+{name:'自动匹配'},
+{name:'提交审核'},
+{name:'历史问题导入'},
+{name:'五维风险评估'},
+{name:'风险综合评分(1-12分)'},
+{name:'评估确认'}
+];
+var currentStep = 0;
+var completedSteps = {};
+var isSubmitted = false;
+var submitCount = 0;
+
+var dims = [
+{name:'技术新颖性',weight:0.15,weightLabel:'15%',high:['采用全新技术/架构，无公司内部应用经验','采用行业首例技术方案','核心功能/性能指标超出现有平台能力'],mid:['技术方案有内部参考但应用场景差异较大','关键器件/材料首次使用'],low:['技术方案有成熟内部参考，场景相似','仅参数调整，技术原理不变']},
+{name:'影响范围',weight:0.30,weightLabel:'30%',high:['变更影响整机系统，涉及多个子系统交互','变更影响客户接口/业务面，客户直接感知','变更影响3个及以上子系统/模块'],mid:['变更影响2个子系统/模块','变更影响单一子系统但涉及核心功能'],low:['变更仅影响单一模块的辅助功能','变更范围局限于单一器件/组件']},
+{name:'失效严重度',weight:0.30,weightLabel:'30%',high:['失效可能导致人身安全风险或法规不符合','失效导致核心功能完全丧失，业务中断','失效影响整机或网络级运行'],mid:['失效导致核心功能降级，客户业务受影响','失效导致辅助功能丧失，客户体验显著下降'],low:['失效仅导致性能轻微下降，客户可容忍','失效仅影响外观或非功能性指标']},
+{name:'变更复杂度',weight:0.20,weightLabel:'20%',high:['变更涉及全新设计，无历史基线参考','变更涉及多学科交叉（硬件+软件+结构+工艺）','变更导致接口定义重大修改'],mid:['变更涉及2个学科领域','变更对现有接口有局部调整'],low:['变更仅涉及单一学科领域','变更为简单参数/配置调整']},
+{name:'历史问题',weight:0.05,weightLabel:'5%',high:['同类变更在历史项目中发生过严重失效（H级）','历史问题库中存在3条及以上相关失效记录','历史问题尚未完全闭环'],mid:['历史问题库中存在1-2条相关失效记录','历史问题已闭环但措施有效性未充分验证'],low:['历史问题已闭环且措施有效','无相关历史问题记录']}
+];
+
+var rows = [
+{level:0,id:'1',name:'CloudEngine S12700E整机系统',devType:'联合开发',imn:'M',change:'新增400GE接口板卡支持'},
+{level:1,id:'1.1',name:'主控板子系统',devType:'自主开发',imn:'M',change:'主控板CPU升级至ARM A72架构'},
+{level:2,id:'1.1.1',name:'主控板PCB',devType:'自主开发',imn:'M',change:'PCB层数从12层增加到16层'},
+{level:2,id:'1.1.2',name:'主控板散热模组',devType:'自主开发',imn:'M',change:'散热片尺寸增大20%'},
+{level:1,id:'1.2',name:'交换网板子系统',devType:'联合开发',imn:'M',change:'交换芯片带宽升级至25.6Tbps'},
+{level:2,id:'1.2.1',name:'交换芯片',devType:'供应商开发',imn:'I',change:'采用新一代SDN交换芯片'},
+{level:1,id:'1.3',name:'接口板子系统',devType:'供应商开发',imn:'N',change:'新增400GE QSFP-DD接口板'},
+{level:0,id:'2',name:'电源子系统',devType:'联合开发',imn:'M',change:'电源模块从1500W升级至3000W'},
+{level:1,id:'2.1',name:'AC电源模块',devType:'自主开发',imn:'M',change:'功率密度提升，散热结构重新设计'}
+];
+
+var qualityPlanData = [
+{category:'主控板',riskSubType:'核心芯片更换',guide:'需验证新CPU架构的稳定性和性能指标'},
+{category:'交换网板',riskSubType:'交换容量提升',guide:'需验证大流量下的转发性能和时延指标'},
+{category:'接口板',riskSubType:'新增接口类型',guide:'需验证400GE接口的信号完整性和兼容性'},
+{category:'电源模块',riskSubType:'功耗变更',guide:'需验证散热设计和电源冗余能力'}
+];
+
+var historyIssueData = [
+{faultOrderNo:'FT-2024-0156',issueNo:'ISS-2024-0045',issueType:'硬件缺陷',domain:'数据通信',productModel:'S12700E',issueDesc:'主控板高温下复位',detailDesc:'环境温度超过45℃时主控板异常复位',solution:'优化散热风道设计，增加温度监控阈值告警'},
+{faultOrderNo:'FT-2024-0289',issueNo:'ISS-2024-0078',issueType:'可靠性问题',domain:'数据通信',productModel:'S12700E',issueDesc:'交换芯片SerDes信号异常',detailDesc:'高速SerDes信号眼图裕量不足',solution:'优化预加重参数，增加信号补偿电路'},
+{faultOrderNo:'FT-2025-0034',issueNo:'ISS-2025-0012',issueType:'电源问题',domain:'数据通信',productModel:'S12700E',issueDesc:'电源模块输出纹波超标',detailDesc:'高负载下电源输出纹波超过规格',solution:'更换低ESR滤波电容，优化PCB布局'},
+{faultOrderNo:'FT-2025-0078',issueNo:'ISS-2025-0045',issueType:'兼容性问题',domain:'数据通信',productModel:'S12700E',issueDesc:'400GE接口协商失败',detailDesc:'400GE接口与某厂商设备FEC协商不一致',solution:'增加FEC模式自适应协商功能'}
+];
+
+var scoreData = {};
+
+function buildStepBar(){
+var html='';
+for(var i=0;i<steps.length;i++){
+if(i>0) html+='<span class="step-arrow">→</span>';
+var cls='step-item';
+if(completedSteps[i]) cls+=' done';
+else if(i===currentStep) cls+=' active';
+else cls+=' disabled';
+var numText=completedSteps[i]?'✓':(i+1);
+html+='<div class="'+cls+'"><span class="step-num">'+numText+'</span><span>'+steps[i].name+'</span></div>';
+}
+document.getElementById('stepBar').innerHTML=html;
+}
+
+function buildStepContent(){
+var html='';
+html+=buildStep0();
+html+=buildStep1();
+html+=buildStep2();
+html+=buildStep3();
+html+=buildStep4();
+html+=buildStep5();
+html+=buildStep6();
+html+=buildStep7();
+document.getElementById('stepContent').innerHTML=html;
+var panels=document.querySelectorAll('.step-panel');
+panels.forEach(function(p,i){p.classList.toggle('active',i===currentStep);});
+document.getElementById('stepInfo').textContent='步骤 '+(currentStep+1)+' / '+steps.length;
+document.getElementById('btnPrev').disabled=(currentStep===0);
+document.getElementById('btnNext').disabled=(currentStep===steps.length-1);
+if(currentStep===5) buildEvalTable();
+if(currentStep===6) buildScoreResult();
+if(currentStep===7) buildValidation();
+}
+
+function prevStep(){if(currentStep>0){currentStep--;buildStepBar();buildStepContent();}}
+function nextStep(){if(currentStep<steps.length-1){currentStep++;buildStepBar();buildStepContent();}}
+
+function buildStep0(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">变更点清单导入</div>';
+h+='<div style="margin-bottom:12px;display:flex;gap:8px;">';
+h+='<button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'导入变更点清单Excel\')">📥 导入变更点清单</button>';
+h+='<span style="margin-left:12px;font-size:12px;color:var(--gray-500);line-height:28px;">支持.xlsx格式标准模板文件</span></div>';
+h+='<div style="overflow-x:auto;"><table class="change-table">';
+h+='<thead><tr><th>Level</th><th>ID</th><th>系统/部件名称</th><th>开发类型</th><th>I/M/N</th><th>变更点</th></tr></thead><tbody>';
+rows.forEach(function(r){
+var levelCls='level-'+r.level;
+var imnCls='imn-'+r.imn;
+h+='<tr>';
+h+='<td class="'+levelCls+'">'+r.level+'</td>';
+h+='<td class="'+levelCls+'">'+r.id+'</td>';
+h+='<td class="'+levelCls+'" style="'+(r.level>0?'padding-left:'+(16+r.level*16)+'px;':'')+'">'+r.name+'</td>';
+h+='<td><span class="aac-tag">'+r.devType+'</span></td>';
+h+='<td><span class="imn-tag '+imnCls+'">'+r.imn+'</span></td>';
+h+='<td class="changed">'+r.change+'</td>';
+h+='</tr>';
+});
+h+='</tbody></table></div>';
+h+='<div style="margin-top:12px;text-align:right"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="completedSteps[0]=true;buildStepBar();nextStep();">确认导入 →</button></div>';
+h+='</div>';
+return h;
+}
+
+function buildStep1(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">质量策划表导入</div>';
+h+='<div style="margin-bottom:12px;display:flex;gap:8px;">';
+h+='<button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'导入质量策划表Excel\')">📥 导入质量策划表</button>';
+h+='<span style="margin-left:12px;font-size:12px;color:var(--gray-500);line-height:28px;">支持.xlsx格式质量策划文件</span></div>';
+h+='<div style="overflow-x:auto;"><table class="change-table">';
+h+='<thead><tr><th>风险小类</th><th>风险策划子类</th><th>风险策划指南</th></tr></thead><tbody>';
+qualityPlanData.forEach(function(q){
+h+='<tr><td>'+q.category+'</td><td>'+q.riskSubType+'</td><td style="text-align:left;">'+q.guide+'</td></tr>';
+});
+h+='</tbody></table></div>';
+h+='<div style="margin-top:12px;text-align:right"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="completedSteps[1]=true;buildStepBar();nextStep();">确认导入 →</button></div>';
+h+='</div>';
+return h;
+}
+
+function buildStep2(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">自动匹配</div>';
+h+='<div class="info-box info-box-blue" style="margin-bottom:12px">将质量策划内容与变更点清单进行模糊匹配，匹配结果将更新到变更点清单的"质量策划匹配"列。</div>';
+h+='<div style="margin-bottom:12px;display:flex;gap:8px;">';
+h+='<button class="aac-btn aac-btn-primary aac-btn-sm" onclick="doAutoMatch()">🔄 自动匹配</button></div>';
+h+='<div id="matchResultPanel"><div style="text-align:center;color:var(--gray-500);padding:60px 0">请点击"自动匹配"按钮执行匹配</div></div>';
+h+='</div>';
+return h;
+}
+
+function doAutoMatch(){
+var html='<table class="change-table"><thead><tr><th>ID</th><th>系统/部件名称</th><th>变更点</th><th>匹配状态</th><th>匹配内容</th></tr></thead><tbody>';
+rows.forEach(function(r){
+var matched=false;var matchContent='';
+qualityPlanData.forEach(function(q){
+if(r.name.indexOf(q.category)>=0||q.category.indexOf(r.name)>=0){matched=true;matchContent=q.guide;}
+});
+var statusHtml=matched?'<span class="match-yes">已匹配</span>':'<span class="match-no">未匹配</span>';
+html+='<tr><td>'+r.id+'</td><td>'+r.name+'</td><td class="changed">'+r.change+'</td><td>'+statusHtml+'</td><td style="text-align:left;">'+(matchContent||'无')+'</td></tr>';
+});
+html+='</tbody></table>';
+document.getElementById('matchResultPanel').innerHTML=html;
+completedSteps[2]=true;buildStepBar();
+}
+
+function buildStep3(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">提交审核</div>';
+h+='<div class="info-box info-box-green" style="margin-bottom:12px">';
+h+='<div>提交后评估表将发送至PSE进行审核</div>';
+h+='<div>PSE审核通过后方可进入后续步骤</div>';
+h+='<div>提交后如需修改，可点击"撤回"按钮撤回评估表</div></div>';
+h+='<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">';
+if(!isSubmitted){
+h+='<button class="aac-btn aac-btn-primary aac-btn-sm" onclick="doSubmit()">提交审核</button>';
+}else{
+h+='<button class="aac-btn aac-btn-secondary aac-btn-sm" onclick="doWithdraw()">撤回</button>';
+h+='<span style="margin-left:12px;font-size:13px;color:var(--warning);">评估表已提交，等待PSE审核</span>';
+}
+h+='</div>';
+h+='<div class="info-box info-box-blue">';
+h+='<div>当前状态：<strong>'+(isSubmitted?'已提交':'草稿')+'</strong></div>';
+h+='<div>提交次数：<strong>'+submitCount+'</strong></div>';
+h+='</div></div>';
+return h;
+}
+
+function doSubmit(){isSubmitted=true;submitCount++;completedSteps[3]=true;buildStepBar();buildStepContent();}
+function doWithdraw(){isSubmitted=false;completedSteps[3]=false;buildStepBar();buildStepContent();}
+
+function buildStep4(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">历史问题导入</div>';
+h+='<div style="margin-bottom:12px;display:flex;gap:8px;">';
+h+='<button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'导入历史问题Excel\')">📥 导入历史问题</button>';
+h+='<button class="aac-btn aac-btn-secondary aac-btn-sm" onclick="alert(\'从历史问题库选择\')">📚 从历史问题库选择</button>';
+h+='<span style="margin-left:12px;font-size:12px;color:var(--gray-500);line-height:28px;">追加模式导入</span></div>';
+h+='<div style="overflow-x:auto;"><table class="change-table">';
+h+='<thead><tr><th>故障单号</th><th>问题编号</th><th>问题类型</th><th>涉及领域</th><th>产品型号</th><th>问题描述</th><th>详细说明</th><th>解决方案</th></tr></thead><tbody>';
+historyIssueData.forEach(function(iss){
+h+='<tr><td>'+iss.faultOrderNo+'</td><td>'+iss.issueNo+'</td><td><span class="aac-tag aac-tag-warning">'+iss.issueType+'</span></td><td>'+iss.domain+'</td><td>'+iss.productModel+'</td><td style="max-width:160px;">'+iss.issueDesc+'</td><td style="max-width:200px;">'+iss.detailDesc+'</td><td style="max-width:200px;">'+iss.solution+'</td></tr>';
+});
+h+='</tbody></table></div>';
+h+='<div style="margin-top:12px;text-align:right"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="completedSteps[4]=true;buildStepBar();nextStep();">确认导入 →</button></div>';
+h+='</div>';
+return h;
+}
+
+function buildStep5(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">五维风险评估（LEVEL=0变更点）</div>';
+h+='<div class="info-box info-box-blue" style="margin-bottom:12px">对每个系统级（LEVEL=0）变更点进行技术新颖性、影响范围、失效严重度、变更复杂度、历史问题五个维度的评估。每个维度按高/中/低三组选项选择"是/否"。</div>';
+h+='<div class="eval-table-wrap"><div class="eval-table-scroll" id="tableContainer"></div></div>';
+h+='<div style="margin-top:10px;text-align:right"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="calculateScore()">📊 评分</button> <button class="aac-btn aac-btn-secondary aac-btn-sm" onclick="resetForm()">重置</button></div>';
+h+='</div>';
+return h;
+}
+
+function buildEvalTable(){
+var leftColDefs=[{key:'level',title:'Level',width:42},{key:'id',title:'ID',width:48},{key:'name',title:'系统/部件名称',width:130},{key:'devType',title:'开发类型',width:52},{key:'imn',title:'I/M/N',width:46},{key:'change',title:'变更点描述',width:140}];
+function getLeftOffset(colIdx){var off=0;for(var i=0;i<colIdx;i++)off+=leftColDefs[i].width;return off;}
+
+var h='<table id="evalTable"><thead>';
+h+='<tr>';
+for(var i=0;i<leftColDefs.length;i++){var isLast=(i===leftColDefs.length-1);var cls='sticky-col corner-cell'+(isLast?' last-sticky':'');h+='<th class="'+cls+'" rowspan="3" style="left:'+getLeftOffset(i)+'px;min-width:'+leftColDefs[i].width+'px">'+leftColDefs[i].title+'</th>';}
+for(var d=0;d<dims.length;d++){h+='<th class="dim-hdr" colspan="7">'+dims[d].name+'('+dims[d].weightLabel+')</th>';}
+h+='<th class="score-col-header score-start" colspan="5" style="top:0">各维度得分</th>';
+var resultHeaders=['风险综合评分(1-12分)','风险等级','DRBFM触发评估建议','理由及建议分析重点','最终DRBFM触发结论','拒绝建议理由'];
+var resultWidths=[100,55,110,130,110,110];
+for(var r=0;r<resultHeaders.length;r++){h+='<th class="result-col-header'+(r===0?' result-start':'')+'" rowspan="3" style="top:0;min-width:'+resultWidths[r]+'px">'+resultHeaders[r]+'</th>';}
+h+='</tr>';
+
+h+='<tr>';
+for(var d=0;d<dims.length;d++){h+='<th class="group-high dim-start" colspan="3">高风险(10分)</th>';h+='<th class="group-mid" colspan="2">中风险(5分)</th>';h+='<th class="group-low" colspan="2">低风险(1分)</th>';}
+for(var d=0;d<dims.length;d++){h+='<th class="score-col-header'+(d===0?' score-start':'')+'" rowspan="2" style="top:32px;min-width:42px;font-size:10px">'+dims[d].name+'</th>';}
+h+='</tr>';
+
+h+='<tr>';
+for(var d=0;d<dims.length;d++){var allOpts=dims[d].high.concat(dims[d].mid).concat(dims[d].low);for(var o=0;o<allOpts.length;o++){h+='<th class="opt-header'+(o===0?' dim-start':'')+'" style="top:64px">'+allOpts[o]+'</th>';}}
+h+='</tr></thead><tbody>';
+
+for(var ri=0;ri<rows.length;ri++){
+var row=rows[ri];
+h+='<tr class="level-'+row.level+'">';
+for(var i=0;i<leftColDefs.length;i++){var isLast=(i===leftColDefs.length-1);var cls='sticky-col'+(isLast?' last-sticky':'');var val=row[leftColDefs[i].key];var style='left:'+getLeftOffset(i)+'px;min-width:'+leftColDefs[i].width+'px';if(leftColDefs[i].key==='name'){var indent=row.level*16;style+=';text-align:left;padding-left:'+(8+indent)+'px';}else if(leftColDefs[i].key==='change'){style+=';text-align:left';}h+='<td class="'+cls+'" style="'+style+'">'+val+'</td>';}
+
+if(row.level===0){
+for(var d=0;d<dims.length;d++){var allOpts=dims[d].high.concat(dims[d].mid).concat(dims[d].low);for(var o=0;o<allOpts.length;o++){var gIdx=o<dims[d].high.length?0:(o<dims[d].high.length+dims[d].mid.length?1:2);var gKeys=['h','m','l'];var oIdx=o<dims[d].high.length?o:(o<dims[d].high.length+dims[d].mid.length?o-dims[d].high.length:o-dims[d].high.length-dims[d].mid.length);var rName='r_'+row.id+'_d'+d+'_'+gKeys[gIdx]+'_'+oIdx;h+='<td class="opt-cell'+(o===0?' dim-start':'')+'"><div class="radio-wrap">';h+='<label><input type="radio" name="'+rName+'" value="是">是</label>';h+='<label><input type="radio" name="'+rName+'" value="否">否</label>';h+='</div></td>';}}
+for(var d=0;d<dims.length;d++){h+='<td class="score-cell'+(d===0?' score-start':'')+'" id="sc_'+row.id+'_'+d+'"></td>';}
+h+='<td class="result-cell result-start" id="ts_'+row.id+'" style="text-align:center;font-weight:700;font-size:14px"></td>';
+h+='<td class="result-cell" id="rl_'+row.id+'" style="text-align:center"></td>';
+h+='<td class="result-cell" id="sg_'+row.id+'"></td>';
+h+='<td class="result-cell" id="rs_'+row.id+'"></td>';
+h+='<td class="result-cell" id="cl_'+row.id+'"></td>';
+h+='<td class="result-cell" id="rj_'+row.id+'"></td>';
+}else{
+var totalOptCols=0;for(var d=0;d<dims.length;d++)totalOptCols+=dims[d].high.length+dims[d].mid.length+dims[d].low.length;
+for(var c=0;c<totalOptCols;c++){var isDimStart=false;var cum=0;for(var d=0;d<dims.length;d++){if(c===cum){isDimStart=true;break;}cum+=dims[d].high.length+dims[d].mid.length+dims[d].low.length;}h+='<td class="opt-cell'+(isDimStart?' dim-start':'')+'"></td>';}
+for(var d=0;d<dims.length;d++){h+='<td class="score-cell'+(d===0?' score-start':'')+'"></td>';}
+h+='<td class="result-cell result-start"></td><td class="result-cell"></td><td class="result-cell"></td><td class="result-cell"></td><td class="result-cell"></td><td class="result-cell"></td>';
+}
+h+='</tr>';
+}
+h+='</tbody></table>';
+document.getElementById('tableContainer').innerHTML=h;
+}
+
+function getDimScore(rowId,dimIdx){
+var dim=dims[dimIdx];
+var groups=[{key:'h',count:dim.high.length},{key:'m',count:dim.mid.length},{key:'l',count:dim.low.length}];
+var scores=[10,5,1];
+for(var g=0;g<groups.length;g++){for(var o=0;o<groups[g].count;o++){var rName='r_'+rowId+'_d'+dimIdx+'_'+groups[g].key+'_'+o;var checked=document.querySelector('input[name="'+rName+'"]:checked');if(checked&&checked.value==='是')return scores[g];}}
+var hasAny=false;
+for(var g=0;g<groups.length;g++){for(var o=0;o<groups[g].count;o++){var rName='r_'+rowId+'_d'+dimIdx+'_'+groups[g].key+'_'+o;if(document.querySelector('input[name="'+rName+'"]:checked')){hasAny=true;break;}}if(hasAny)break;}
+return hasAny?0:-1;
+}
+
+function getRiskLevel(score){if(score>=8)return'H';if(score>=5)return'M';return'L';}
+function getRiskBadge(level){return'<span class="risk-badge risk-badge-'+level+'">'+level+'</span>';}
+function getSuggestText(level){var map={H:'必须进行DRBFM分析',M:'建议进行DRBFM分析',L:'可以不进行DRBFM分析'};return map[level]||'';}
+
+function buildReasonText(dimScores,level){
+var parts=[];var focusParts=[];
+for(var d=0;d<dims.length;d++){if(dimScores[d]>=10){parts.push(dims[d].name+'高风险(10分)');focusParts.push('重点分析'+dims[d].name+'相关失效模式及预防措施');}else if(dimScores[d]>=5){parts.push(dims[d].name+'中风险(5分)');focusParts.push('关注'+dims[d].name+'相关潜在风险');}}
+if(parts.length===0)return'各维度风险较低，变更整体风险可控';
+var reason=parts.join('、')+'，综合风险等级为'+level+'级';
+if(focusParts.length>0)reason+='。'+focusParts.join('；');
+return reason;
+}
+
+function calculateScore(){
+var level0Rows=rows.filter(function(r){return r.level===0;});
+var allFilled=true;var results=[];
+for(var i=0;i<level0Rows.length;i++){
+var row=level0Rows[i];var dimScores=[];var totalWeighted=0;
+for(var d=0;d<dims.length;d++){var s=getDimScore(row.id,d);if(s<0){allFilled=false;s=0;}dimScores.push(s);totalWeighted+=s*dims[d].weight;}
+totalWeighted=Math.round(totalWeighted*100)/100;
+var scaledScore=Math.round(totalWeighted*1.2*10)/10;
+if(scaledScore>12)scaledScore=12;
+if(scaledScore<1&&totalWeighted>0)scaledScore=1;
+if(totalWeighted===0)scaledScore=0;
+var level=getRiskLevel(scaledScore);
+results.push({row:row,dimScores:dimScores,total:scaledScore,rawTotal:totalWeighted,level:level});
+}
+if(!allFilled){alert('部分维度的选项未填写完整，未填写的维度将按0分计算。');}
+for(var i=0;i<results.length;i++){
+var res=results[i];
+for(var d=0;d<dims.length;d++){var cell=document.getElementById('sc_'+res.row.id+'_'+d);if(cell){var sc=res.dimScores[d];var cls=sc>=10?'score-high':(sc>=5?'score-mid':(sc>=1?'score-low':'score-zero'));cell.innerHTML='<span class="'+cls+'">'+sc+'</span>';}}
+var tsCell=document.getElementById('ts_'+res.row.id);if(tsCell)tsCell.innerHTML='<span style="color:var(--primary)">'+res.total+'</span>';
+var rlCell=document.getElementById('rl_'+res.row.id);if(rlCell)rlCell.innerHTML=getRiskBadge(res.level);
+var sgCell=document.getElementById('sg_'+res.row.id);if(sgCell)sgCell.innerHTML=getSuggestText(res.level);
+var rsCell=document.getElementById('rs_'+res.row.id);if(rsCell)rsCell.innerHTML=buildReasonText(res.dimScores,res.level);
+var clCell=document.getElementById('cl_'+res.row.id);if(clCell){var sel='<select onchange="onConclusionChange(this)"><option value="H"'+(res.level==='H'?' selected':'')+'>H - 必须进行DRBFM分析</option><option value="M"'+(res.level==='M'?' selected':'')+'>M - 建议进行DRBFM分析</option><option value="L"'+(res.level==='L'?' selected':'')+'>L - 可以不进行DRBFM分析</option></select>';clCell.innerHTML=sel;}
+var rjCell=document.getElementById('rj_'+res.row.id);if(rjCell){rjCell.innerHTML='<input type="text" placeholder="如拒绝建议请填写理由" style="width:100%;border:1px solid #ddd;border-radius:3px;padding:2px 4px;font-size:11px;font-family:var(--font-family)">';}
+}
+completedSteps[5]=true;buildStepBar();
+alert('评分完成！请查看评分结果。');
+}
+
+function onConclusionChange(sel){var badge=getRiskBadge(sel.value);var rowId=sel.parentNode.id.replace('cl_','');var rlCell=document.getElementById('rl_'+rowId);if(rlCell)rlCell.innerHTML=badge;}
+
+function resetForm(){
+var radios=document.querySelectorAll('#evalTable input[type="radio"]');radios.forEach(function(r){r.checked=false;});
+document.querySelectorAll('#evalTable .score-cell, #evalTable .result-cell').forEach(function(c){c.innerHTML='';});
+}
+
+function buildStep6(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">风险综合评分(1-12分)</div>';
+h+='<div class="score-formula">风险综合评分(1-12分) = 技术新颖性<span class="hl">×15%</span> + 影响范围<span class="hl">×30%</span> + 失效严重度<span class="hl">×30%</span> + 变更复杂度<span class="hl">×20%</span> + 历史问题<span class="hl">×5%</span></div>';
+h+='<div class="info-box info-box-yellow" style="margin-bottom:12px">风险等级：<span style="color:var(--danger);font-weight:700">H（≥8分）</span> | <span style="color:#856404;font-weight:700">M（5~8分）</span> | <span style="color:var(--gray-500);font-weight:700">L（<5分）</span></div>';
+h+='<div id="scoreResultArea"></div>';
+h+='</div>';
+return h;
+}
+
+function buildScoreResult(){
+var level0Rows=rows.filter(function(r){return r.level===0;});
+var h='';
+for(var i=0;i<level0Rows.length;i++){
+var row=level0Rows[i];var dimScores=[];var totalWeighted=0;
+for(var d=0;d<dims.length;d++){var s=getDimScore(row.id,d);if(s<0)s=0;dimScores.push(s);totalWeighted+=s*dims[d].weight;}
+totalWeighted=Math.round(totalWeighted*100)/100;
+var scaledScore=Math.round(totalWeighted*1.2*10)/10;
+if(scaledScore>12)scaledScore=12;if(scaledScore<1&&totalWeighted>0)scaledScore=1;if(totalWeighted===0)scaledScore=0;
+var level=getRiskLevel(scaledScore);
+
+h+='<div class="eval-item-card">';
+h+='<div class="eval-item-header"><span>'+row.id+' '+row.name+' — '+row.change+'</span>';
+h+='<span class="risk-tag risk-'+level+'">'+level+'级 ('+scaledScore+'分)</span></div>';
+h+='<div class="eval-item-body">';
+var dimNames=['技术新颖性','影响范围','失效严重度','变更复杂度','历史问题'];
+var dimWeights=['15%','30%','30%','20%','5%'];
+for(var d=0;d<dims.length;d++){var ds=dimScores[d];var dsText=ds>=0?ds:'<span style="color:var(--danger)">未填写</span>';h+='<div class="score-row"><span class="label">'+dimNames[d]+'：</span><span class="value">'+dsText+'</span><span class="weight">×'+dimWeights[d]+'</span></div>';}
+h+='<div class="score-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-200)"><span class="label" style="font-weight:700">综合评分：</span><span class="value" style="font-size:18px;color:var(--primary)">'+scaledScore+'</span></div>';
+h+='<div class="conclusion-row"><span class="label">DRBFM触发评估建议：</span><span style="font-weight:700">'+getSuggestText(level)+'</span></div>';
+h+='<div class="conclusion-row"><span class="label">理由及建议分析重点：</span><span>'+buildReasonText(dimScores,level)+'</span></div>';
+h+='<div class="conclusion-row"><span class="label">最终DRBFM触发结论：</span>';
+h+='<select style="padding:4px 8px;border:1px solid #ced4da;border-radius:3px;font-size:12px;font-family:var(--font-family)">';
+h+='<option value="H"'+(level==='H'?' selected':'')+'>H - 必须进行DRBFM分析</option>';
+h+='<option value="M"'+(level==='M'?' selected':'')+'>M - 建议进行DRBFM分析</option>';
+h+='<option value="L"'+(level==='L'?' selected':'')+'>L - 可以不进行DRBFM分析</option>';
+h+='</select></div>';
+h+='<div class="conclusion-row"><span class="label">拒绝建议理由：</span><input type="text" style="width:320px;border:1px solid #ddd;border-radius:4px;padding:4px 8px;font-size:12px;font-family:var(--font-family)" placeholder="如拒绝系统建议，请填写理由"></div>';
+h+='</div></div>';
+}
+document.getElementById('scoreResultArea').innerHTML=h;
+completedSteps[6]=true;buildStepBar();
+}
+
+function buildStep7(){
+var h='<div class="step-panel">';
+h+='<div class="section-title">评估确认</div>';
+h+='<div style="margin-bottom:12px;font-size:13px;color:var(--gray-600)">确认所有LEVEL=0变更点的五维风险评估已填写完整后，点击"确认评估"按钮完成评估并创建DRBFM分析任务。</div>';
+h+='<div id="validationArea"></div>';
+h+='<div style="margin-top:16px;text-align:center"><button class="aac-btn aac-btn-primary" onclick="doConfirmEval()">确认评估</button></div>';
+h+='</div>';
+return h;
+}
+
+function buildValidation(){
+var errors=validateEvaluation();
+var h='';
+if(errors.length>0){
+h+='<div style="margin-bottom:8px;font-size:13px;color:var(--danger);font-weight:700">以下评估项尚未完成：</div>';
+for(var i=0;i<errors.length;i++)h+='<div class="validation-error">'+errors[i]+'</div>';
+}else{
+h+='<div style="padding:20px;text-align:center;color:var(--success);font-size:14px;font-weight:700">✓ 所有LEVEL=0变更点的五维风险评估已填写完整，可以进行确认</div>';
+}
+document.getElementById('validationArea').innerHTML=h;
+}
+
+function validateEvaluation(){
+var errors=[];var level0Rows=rows.filter(function(r){return r.level===0;});
+var dimNames=['技术新颖性','影响范围','失效严重度','变更复杂度','历史问题'];
+for(var i=0;i<level0Rows.length;i++){var row=level0Rows[i];for(var d=0;d<dims.length;d++){var s=getDimScore(row.id,d);if(s<0)errors.push('第'+row.id+'行 - '+row.name+'：'+dimNames[d]+'维度未填写');}}
+return errors;
+}
+
+function doConfirmEval(){
+var errors=validateEvaluation();
+if(errors.length>0){alert('存在未完成的评估项，请补充完整后再确认。');return;}
+completedSteps[7]=true;buildStepBar();
+alert('评估已确认！系统已自动创建DRBFM分析任务，任务状态：结构分析。');
+}
+
+buildStepBar();buildStepContent();
+</script>
+</body>
+</html>

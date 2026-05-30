@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../css/custom.css">
+</head>
+<body class="aac">
+<div class="aac-page">
+    <div class="aac-page-title">
+        <span class="title-bar"></span>
+        DRBFM分析任务详情
+        <span style="font-size:13px;font-weight:400;color:var(--text-secondary);margin-left:8px;">CloudEngine S12700E DRBFM分析</span>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="aac-btn aac-btn-primary aac-btn-sm">💾 保存</button>
+        <button class="aac-btn aac-btn-secondary aac-btn-sm">📤 提交</button>
+        <button class="aac-btn aac-btn-ghost aac-btn-sm">🔄 刷新</button>
+    </div>
+
+    <div id="step-progress-container"></div>
+
+    <div id="step-content">
+        <div id="step-structure" class="step-panel" style="display:none;"></div>
+        <div id="step-function" class="step-panel" style="display:none;"></div>
+        <div id="step-failure" class="step-panel" style="display:none;"></div>
+        <div id="step-review" class="step-panel" style="display:none;"></div>
+        <div id="step-approval" class="step-panel" style="display:none;"></div>
+    </div>
+</div>
+
+<script src="../js/mock-data.js"></script>
+<script>
+(function () {
+    var currentStep = 2;
+    var steps = ['结构分析', '功能分析', '失效分析', '评审', '审批'];
+
+    var progressContainer = document.getElementById('step-progress-container');
+    progressContainer.innerHTML = parent.App.buildStepProgress(steps, currentStep);
+
+    var stepTabs = document.createElement('div');
+    stepTabs.style.cssText = 'display:flex;gap:4px;margin-bottom:16px;background:var(--bg-surface);border-radius:var(--radius);padding:4px;border:1px solid var(--border-color);';
+    steps.forEach(function (s, i) {
+        var btn = document.createElement('button');
+        btn.className = 'aac-btn aac-btn-sm';
+        if (i === currentStep) {
+            btn.className += ' aac-btn-primary';
+        } else if (i < currentStep) {
+            btn.className += ' aac-btn-secondary';
+            btn.style.cssText = 'border-color:var(--success);color:var(--success);';
+        } else {
+            btn.className += ' aac-btn-ghost';
+        }
+        btn.textContent = s;
+        btn.style.flex = '1';
+        btn.onclick = function () { showStep(i); };
+        stepTabs.appendChild(btn);
+    });
+    progressContainer.after(stepTabs);
+
+    function showStep(idx) {
+        for (var i = 0; i < 5; i++) {
+            var panel = document.getElementById('step-' + ['structure', 'function', 'failure', 'review', 'approval'][i]);
+            panel.style.display = i === idx ? 'block' : 'none';
+        }
+        var btns = stepTabs.querySelectorAll('.aac-btn');
+        btns.forEach(function (b, i) {
+            b.className = 'aac-btn aac-btn-sm';
+            if (i === idx) b.className += ' aac-btn-primary';
+            else if (i < currentStep) { b.className += ' aac-btn-secondary'; b.style.cssText = 'border-color:var(--success);color:var(--success);'; }
+            else b.className += ' aac-btn-ghost';
+        });
+    }
+
+    renderStructure();
+    renderFunction();
+    renderFailure();
+    renderReview();
+    renderApproval();
+    showStep(currentStep);
+
+    function renderStructure() {
+        var components = MockData.get('structureComponents');
+        var functions = MockData.get('structureFunctions');
+
+        var html = '<div class="aac-split-layout">';
+        html += '<div class="aac-split-left">';
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">部件列表 <div class="title-actions"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'添加部件\')">+ 添加部件</button></div></div>';
+        html += '<ul class="aac-list">';
+        components.forEach(function (c) {
+            var changeTag = c.isChanged ? '<span class="aac-tag aac-tag-danger" style="margin-left:6px;">变更</span>' : '';
+            html += '<li class="aac-list-item"><div><div style="font-size:13px;font-weight:500;">' + c.name + changeTag + '</div>';
+            html += '<div style="font-size:11px;color:var(--text-secondary);">ID: ' + c.componentId + '</div>';
+            if (c.changeDesc) html += '<div style="font-size:11px;color:var(--danger);margin-top:2px;">' + c.changeDesc + '</div>';
+            html += '</div></li>';
+        });
+        html += '</ul></div>';
+
+        html += '<div class="aac-card" style="margin-top:12px;">';
+        html += '<div class="card-title">功能列表 <div class="title-actions"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'添加功能\')">+ 添加功能</button></div></div>';
+        html += '<ul class="aac-list">';
+        functions.forEach(function (f) {
+            html += '<li class="aac-list-item"><div><div style="font-size:13px;font-weight:500;">' + f.name + ' <span class="aac-tag aac-tag-primary" style="margin-left:4px;">' + f.type + '</span></div>';
+            html += '<div style="font-size:11px;color:var(--text-secondary);">关联: ' + f.component1 + (f.component2 ? ' ↔ ' + f.component2 : '') + '</div>';
+            html += '</div></li>';
+        });
+        html += '</ul></div></div>';
+
+        html += '<div class="aac-split-right">';
+        html += '<div class="aac-card" style="padding:0;overflow:hidden;">';
+        html += '<div class="aac-toolbar"><span class="toolbar-title">结构框图</span>';
+        html += '<button class="aac-btn aac-btn-secondary aac-btn-sm">📤 导入结构图</button>';
+        html += '<button class="aac-btn aac-btn-secondary aac-btn-sm">🔄 从飞书画板同步</button>';
+        html += '<button class="aac-btn aac-btn-ghost aac-btn-sm">🔍 放大</button>';
+        html += '</div>';
+        html += '<div class="aac-structure-diagram" style="min-height:500px;border-radius:0 0 var(--radius-lg) var(--radius-lg);">';
+        html += '<div class="diagram-placeholder"><div class="placeholder-icon">📐</div><div style="font-size:14px;">结构框图展示区域</div><div style="font-size:12px;margin-top:4px;">可通过导入结构图或从飞书画板同步部件及功能</div>';
+        html += '<div style="margin-top:16px;display:flex;gap:8px;justify-content:center;">';
+        html += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;"></span> 高风险(H)</div>';
+        html += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;"></span> 中风险(M)</div>';
+        html += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;"><span style="width:12px;height:12px;background:#9aa0a6;border-radius:2px;display:inline-block;"></span> 低风险(L)</div>';
+        html += '</div></div></div></div>';
+
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'进入功能分析步骤\')">下一步 →</button>';
+        html += '</div></div></div>';
+
+        document.getElementById('step-structure').innerHTML = html;
+    }
+
+    function renderFunction() {
+        var html = '<div class="aac-card">';
+        html += '<div class="card-title">功能矩阵表 <div class="title-actions"><button class="aac-btn aac-btn-secondary aac-btn-sm">📥 导入历史问题</button><button class="aac-btn aac-btn-secondary aac-btn-sm">📥 导入技术要求</button><button class="aac-btn aac-btn-secondary aac-btn-sm">📥 导入需求分析文档</button><button class="aac-btn aac-btn-primary aac-btn-sm">🤖 AI补充</button></div></div>';
+        html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">功能矩阵表使用飞书表格嵌入，用户可直接在飞书表格中进行编辑。功能按丰度（关联接口数量）排列。</div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table class="aac-func-matrix">';
+        html += '<tr><th>功能</th><th>描述</th><th>整机系统</th><th>主控板</th><th>交换网板</th><th>接口板</th><th>电源模块</th><th>风扇模块</th><th>机箱</th></tr>';
+
+        var funcs = [
+            { name: '数据转发', desc: '实现报文高速转发', markers: ['', 'Y', 'H', 'H', '', '', ''] },
+            { name: '路由计算', desc: '运行路由协议计算路径', markers: ['', 'H', 'M', '', '', '', ''] },
+            { name: '设备管理', desc: '提供管理接口', markers: ['', 'H', '', 'M', '', '', ''] },
+            { name: '供电保障', desc: '提供稳定电源', markers: ['', 'M', 'M', 'M', 'H', '', ''] },
+            { name: '散热管理', desc: '维持安全温度范围', markers: ['', 'M', 'M', 'M', '', 'H', ''] },
+            { name: '物理承载', desc: '提供物理安装互联', markers: ['', '', '', '', '', '', 'H'] },
+            { name: '信号处理', desc: '物理层信号编解码', markers: ['', '', 'M', 'H', '', '', ''] },
+            { name: '时钟同步', desc: 'IEEE 1588精确时钟', markers: ['', 'H', 'M', 'M', '', '', ''] },
+            { name: '安全防护', desc: 'ACL/防火墙/DDoS', markers: ['', 'H', 'H', 'M', '', '', ''] },
+            { name: 'QoS保障', desc: '流量分类和队列调度', markers: ['', 'M', 'H', 'H', '', '', ''] }
+        ];
+
+        funcs.forEach(function (f) {
+            html += '<tr><td class="row-header">' + f.name + '</td><td style="text-align:left;font-size:11px;">' + f.desc + '</td>';
+            f.markers.forEach(function (m) {
+                if (m === 'H') html += '<td><span class="marker-h">H</span></td>';
+                else if (m === 'M') html += '<td><span class="marker-m">M</span></td>';
+                else if (m === 'Y') html += '<td><span class="marker-y">Y</span></td>';
+                else html += '<td></td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '</table></div></div>';
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'生成失效分析表，进入失效分析步骤\')">下一步 → 生成失效分析表</button>';
+        html += '</div>';
+
+        document.getElementById('step-function').innerHTML = html;
+    }
+
+    function renderFailure() {
+        var records = MockData.get('failureRecords');
+
+        var html = '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'调用AI接口生成失效模式等内容\')">🤖 AI生成</button>';
+        html += '<button class="aac-btn aac-btn-secondary" onclick="alert(\'调用后端接口生成SOD评分\')">📊 SOD评分</button>';
+        html += '<button class="aac-btn aac-btn-ghost">🔄 重新生成</button>';
+        html += '</div>';
+
+        html += '<div class="aac-card" style="padding:0;overflow:hidden;">';
+        html += '<div class="aac-toolbar"><span class="toolbar-title">失效分析记录</span><span style="font-size:12px;color:var(--text-secondary);">共 ' + records.length + ' 条记录，可滚动加载</span></div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table class="aac-table">';
+        html += '<thead><tr><th>结构</th><th>功能</th><th>失效模式</th><th>失效原因</th><th>失效影响</th><th>S</th><th>O</th><th>D</th><th>S×O×D</th><th>AP</th></tr></thead>';
+        html += '<tbody>';
+        records.forEach(function (r) {
+            var apCls = r.ap === 'H' ? 'aac-risk-H' : (r.ap === 'M' ? 'aac-risk-M' : 'aac-risk-L');
+            html += '<tr>';
+            html += '<td>' + r.structure + '</td>';
+            html += '<td>' + r.function + '</td>';
+            html += '<td>' + r.mode + '</td>';
+            html += '<td style="max-width:200px;">' + r.cause + '</td>';
+            html += '<td style="max-width:200px;">' + r.effect + '</td>';
+            html += '<td style="text-align:center;font-weight:600;">' + r.s + '</td>';
+            html += '<td style="text-align:center;font-weight:600;">' + r.o + '</td>';
+            html += '<td style="text-align:center;font-weight:600;">' + r.d + '</td>';
+            html += '<td style="text-align:center;font-weight:700;">' + r.sop + '</td>';
+            html += '<td style="text-align:center;"><span class="aac-risk ' + apCls + '">' + r.ap + '</span></td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:16px;">';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'进入评审步骤\')">下一步 → 进入评审</button>';
+        html += '</div>';
+
+        document.getElementById('step-failure').innerHTML = html;
+    }
+
+    function renderReview() {
+        var reviewers = MockData.get('reviewers');
+
+        var html = '<div class="aac-split-layout">';
+        html += '<div class="aac-split-left" style="width:400px;">';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">评审信息</div>';
+        html += '<div style="margin-bottom:16px;">';
+        html += '<a href="javascript:void(0)" style="color:var(--primary);font-size:13px;" onclick="alert(\'查看失效分析表\')">📄 点击查看失效分析表</a>';
+        html += '</div>';
+        html += '<div style="margin-bottom:12px;"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">评审日期</label><input type="date" value="2026-04-10" style="width:100%;"></div>';
+        html += '</div>';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">评审人列表 <div class="title-actions"><button class="aac-btn aac-btn-primary aac-btn-sm" onclick="alert(\'添加评审人，需指定角色\')">+ 添加评审人</button></div></div>';
+        html += '<ul class="aac-list">';
+        reviewers.forEach(function (r) {
+            var opinionText = r.opinion === 'agree' ? '同意' : (r.opinion === 'conditional' ? '有条件同意' : (r.opinion === 'pending' ? '待评审' : r.opinion));
+            var opinionCls = r.opinion === 'agree' ? 'aac-opinion-agree' : (r.opinion === 'conditional' ? 'aac-opinion-conditional' : '');
+            html += '<li class="aac-list-item"><div style="display:flex;align-items:center;justify-content:space-between;width:100%;">';
+            html += '<div><div style="font-size:13px;font-weight:500;">' + r.name + '</div>';
+            html += '<div style="font-size:11px;color:var(--text-secondary);">' + r.role + '</div></div>';
+            if (r.opinion !== 'pending') {
+                html += '<span class="aac-review-opinion ' + opinionCls + '">' + opinionText + '</span>';
+            } else {
+                html += '<span class="aac-badge aac-badge-pending">待评审</span>';
+            }
+            html += '</div></li>';
+        });
+        html += '</ul>';
+        html += '<div style="margin-top:12px;"><button class="aac-btn aac-btn-primary" style="width:100%;" onclick="alert(\'发起评审\')">发起评审</button></div>';
+        html += '</div>';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">提交评审意见</div>';
+        html += '<textarea placeholder="请输入评审意见内容..." style="width:100%;height:80px;resize:vertical;margin-bottom:8px;"></textarea>';
+        html += '<button class="aac-btn aac-btn-primary aac-btn-sm">提交意见</button>';
+        html += '</div>';
+
+        html += '</div>';
+
+        html += '<div class="aac-split-right">';
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">评审意见记录</div>';
+        html += '<div class="aac-review-thread">';
+        reviewers.forEach(function (r) {
+            if (!r.comment) return;
+            var opinionText = r.opinion === 'agree' ? '同意' : (r.opinion === 'conditional' ? '有条件同意' : r.opinion);
+            var opinionCls = r.opinion === 'agree' ? 'aac-opinion-agree' : (r.opinion === 'conditional' ? 'aac-opinion-conditional' : '');
+            html += '<div class="aac-review-item">';
+            html += '<div class="aac-reviewer-avatar">' + r.name.charAt(0) + '</div>';
+            html += '<div class="aac-review-content">';
+            html += '<span class="aac-reviewer-name">' + r.name + '</span>';
+            html += '<span class="aac-tag aac-tag-primary" style="margin-left:6px;">' + r.role + '</span>';
+            html += '<span class="aac-review-time">' + r.time + '</span>';
+            html += '<span class="aac-review-opinion ' + opinionCls + '" style="margin-left:8px;">' + opinionText + '</span>';
+            html += '<div class="aac-review-text">' + r.comment + '</div>';
+            html += '</div></div>';
+        });
+        html += '</div></div>';
+
+        html += '<div class="aac-card" style="margin-top:12px;">';
+        html += '<div class="card-title">失效分析表预览</div>';
+        html += '<div class="aac-placeholder" style="min-height:200px;">失效分析表内容展示区域</div>';
+        html += '</div>';
+
+        html += '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">';
+        html += '<button class="aac-btn aac-btn-danger" onclick="alert(\'评审不通过\')">✕ 不通过</button>';
+        html += '<button class="aac-btn aac-btn-primary" onclick="alert(\'评审通过，进入审批步骤\')">✓ 通过 → 进入审批</button>';
+        html += '</div>';
+
+        html += '</div></div>';
+
+        document.getElementById('step-review').innerHTML = html;
+    }
+
+    function renderApproval() {
+        var html = '<div class="aac-split-layout">';
+        html += '<div class="aac-split-left" style="width:400px;">';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">审批信息</div>';
+        html += '<ul class="aac-info-list">';
+        html += '<li><span class="info-label">分析任务</span><span class="info-value">CloudEngine S12700E DRBFM分析</span></li>';
+        html += '<li><span class="info-label">TSE</span><span class="info-value">张三</span></li>';
+        html += '<li><span class="info-label">PSE</span><span class="info-value">李四</span></li>';
+        html += '</ul>';
+        html += '</div>';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">指定审批人</div>';
+        html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.8;">';
+        html += '<div style="padding:6px 10px;background:#fef3c7;border-radius:var(--radius);margin-bottom:8px;">⚠️ 初级变更需专业组长审批</div>';
+        html += '<div style="padding:6px 10px;background:#fef3c7;border-radius:var(--radius);margin-bottom:8px;">⚠️ 中级变更需部门经理审批</div>';
+        html += '<div style="padding:6px 10px;background:#fee2e2;border-radius:var(--radius);">⚠️ 重大变更需技术总监审批</div>';
+        html += '</div>';
+        html += '<div style="margin-bottom:12px;"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">选择审批人</label>';
+        html += '<select style="width:100%;"><option value="">请选择审批人</option><option>马总（专业组长）</option><option>钱总（部门经理）</option><option>孙总（技术总监）</option></select></div>';
+        html += '<button class="aac-btn aac-btn-primary" style="width:100%;" onclick="alert(\'发起审批\')">发起审批</button>';
+        html += '</div>';
+
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">提交审批意见</div>';
+        html += '<textarea placeholder="请输入审批意见..." style="width:100%;height:80px;resize:vertical;margin-bottom:8px;"></textarea>';
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button class="aac-btn aac-btn-primary aac-btn-sm" style="flex:1;" onclick="alert(\'审批通过\')">✓ 通过</button>';
+        html += '<button class="aac-btn aac-btn-danger aac-btn-sm" style="flex:1;" onclick="alert(\'审批不通过\')">✕ 不通过</button>';
+        html += '</div></div>';
+
+        html += '</div>';
+
+        html += '<div class="aac-split-right">';
+        html += '<div class="aac-card">';
+        html += '<div class="card-title">失效分析要点</div>';
+        html += '<div class="aac-placeholder" style="min-height:150px;">失效分析要点内容展示区域</div>';
+        html += '</div>';
+
+        html += '<div class="aac-card" style="margin-top:12px;">';
+        html += '<div class="card-title">基线清单</div>';
+        html += '<table class="aac-table">';
+        html += '<thead><tr><th>基线名称</th><th>类型</th><th>风险等级</th><th>是否落地</th><th>负责人</th></tr></thead>';
+        html += '<tbody>';
+        html += '<tr><td>交换网板信号完整性设计基线</td><td>设计</td><td><span class="aac-risk aac-risk-H">H</span></td><td>是</td><td>李四</td></tr>';
+        html += '<tr><td>主控板散热设计基线</td><td>设计</td><td><span class="aac-risk aac-risk-M">M</span></td><td>是</td><td>王五</td></tr>';
+        html += '<tr><td>电源模块过压保护基线</td><td>设计</td><td><span class="aac-risk aac-risk-H">H</span></td><td>是</td><td>孙七</td></tr>';
+        html += '<tr><td>接口板串扰控制基线</td><td>设计</td><td><span class="aac-risk aac-risk-H">H</span></td><td>否</td><td>李四</td></tr>';
+        html += '</tbody></table></div>';
+
+        html += '<div class="aac-card" style="margin-top:12px;">';
+        html += '<div class="card-title">评审会议纪要</div>';
+        html += '<div style="padding:16px;background:var(--gray-50);border-radius:var(--radius);font-size:13px;line-height:1.8;color:var(--text-secondary);">';
+        html += '<p><strong>评审日期：</strong>2026-03-20</p>';
+        html += '<p><strong>评审结论：</strong>有条件通过</p>';
+        html += '<p><strong>主要意见：</strong></p>';
+        html += '<ul style="padding-left:20px;"><li>结构分解合理，层级清晰</li><li>接口板子系统需进一步细化到光模块和PHY芯片层级</li><li>建议在功能分析阶段关注400GE信号完整性</li></ul>';
+        html += '</div></div>';
+
+        html += '</div></div>';
+
+        document.getElementById('step-approval').innerHTML = html;
+    }
+})();
+</script>
+</body>
+</html>

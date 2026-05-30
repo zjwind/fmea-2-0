@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../css/custom.css">
+</head>
+<body class="aac">
+<div class="aac-page">
+    <div class="aac-page-title">
+        <span class="title-bar"></span>
+        首页看板
+    </div>
+
+    <div class="aac-stat-grid">
+        <div class="aac-stat-card">
+            <div class="stat-icon blue">📊</div>
+            <div class="stat-value">6</div>
+            <div class="stat-label">项目总数</div>
+            <div class="stat-trend up">↑ 较上月 +2</div>
+        </div>
+        <div class="aac-stat-card">
+            <div class="stat-icon orange">📋</div>
+            <div class="stat-value">4</div>
+            <div class="stat-label">进行中评估任务</div>
+            <div class="stat-trend up">↑ 较上月 +1</div>
+        </div>
+        <div class="aac-stat-card">
+            <div class="stat-icon purple">🔬</div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">进行中分析任务</div>
+            <div class="stat-trend">— 与上月持平</div>
+        </div>
+        <div class="aac-stat-card">
+            <div class="stat-icon red">⚠️</div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">高风险项</div>
+            <div class="stat-trend down">↓ 较上月 -1</div>
+        </div>
+    </div>
+
+    <div class="aac-stat-grid">
+        <div class="aac-stat-card aac-stat-wide">
+            <div class="card-title">
+                评估任务进展
+                <div class="title-actions">
+                    <button class="aac-btn aac-btn-ghost aac-btn-sm">查看全部</button>
+                </div>
+            </div>
+            <table class="aac-table">
+                <thead>
+                    <tr>
+                        <th>项目</th>
+                        <th>里程碑</th>
+                        <th>任务名称</th>
+                        <th>TSE</th>
+                        <th>状态</th>
+                        <th>期望结束时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CloudEngine S12700E系列交换机</td>
+                        <td>TR4</td>
+                        <td>系统级DRBFM评估</td>
+                        <td>张三</td>
+                        <td><span class="aac-badge aac-badge-in-progress">进行中</span></td>
+                        <td>2026-03-15</td>
+                    </tr>
+                    <tr>
+                        <td>NetEngine AR8000系列路由器</td>
+                        <td>TR3</td>
+                        <td>系统级DRBFM评估</td>
+                        <td>王五</td>
+                        <td><span class="aac-badge aac-badge-submitted">已提交</span></td>
+                        <td>2026-04-08</td>
+                    </tr>
+                    <tr>
+                        <td>CloudEngine S12700E系列交换机</td>
+                        <td>TR4</td>
+                        <td>主控板部件级DRBFM评估</td>
+                        <td>张三</td>
+                        <td><span class="aac-badge aac-badge-in-progress">进行中</span></td>
+                        <td>2026-04-01</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="aac-stat-card aac-stat-wide">
+            <div class="card-title">
+                分析任务进展
+                <div class="title-actions">
+                    <button class="aac-btn aac-btn-ghost aac-btn-sm">查看全部</button>
+                </div>
+            </div>
+            <table class="aac-table">
+                <thead>
+                    <tr>
+                        <th>任务名称</th>
+                        <th>TSE</th>
+                        <th>当前步骤</th>
+                        <th>状态</th>
+                        <th>期望结束时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CloudEngine S12700E DRBFM分析</td>
+                        <td>张三</td>
+                        <td><span class="aac-tag aac-tag-primary">失效分析</span></td>
+                        <td><span class="aac-badge aac-badge-in-progress">进行中</span></td>
+                        <td>2026-04-22</td>
+                    </tr>
+                    <tr>
+                        <td>NetEngine AR8000 DRBFM分析</td>
+                        <td>王五</td>
+                        <td><span class="aac-tag aac-tag-primary">功能分析</span></td>
+                        <td><span class="aac-badge aac-badge-in-progress">进行中</span></td>
+                        <td>2026-05-15</td>
+                    </tr>
+                    <tr>
+                        <td>OptiXstar P815 DRBFM分析</td>
+                        <td>孙七</td>
+                        <td><span class="aac-tag aac-tag-success">已完成</span></td>
+                        <td><span class="aac-badge aac-badge-completed">已完成</span></td>
+                        <td>2026-03-01</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="aac-stat-grid">
+        <div class="aac-stat-card">
+            <div class="card-title">待处理评审意见</div>
+            <div style="text-align:center;padding:20px 0;">
+                <div style="font-size:36px;font-weight:700;color:var(--warning);">5</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">条待处理意见</div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:center;">
+                <button class="aac-btn aac-btn-primary aac-btn-sm" onclick="parent.App.openPage('我提出的意见','pages/review-my-opinions.html','review-my')">我提出的</button>
+                <button class="aac-btn aac-btn-secondary aac-btn-sm" onclick="parent.App.openPage('待我处理的意见','pages/review-pending-opinions.html','review-pending')">待我处理</button>
+            </div>
+        </div>
+        <div class="aac-stat-card">
+            <div class="card-title">风险分布</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:24px;padding:20px 0;">
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:700;color:#ef4444;">3</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">高风险(H)</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:700;color:#f59e0b;">5</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">中风险(M)</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:700;color:#9aa0a6;">2</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">低风险(L)</div>
+                </div>
+            </div>
+        </div>
+        <div class="aac-stat-card">
+            <div class="card-title">基线落地进度</div>
+            <div style="text-align:center;padding:20px 0;">
+                <div style="font-size:36px;font-weight:700;color:var(--primary);">55%</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">整体落地完成率</div>
+                <div style="margin-top:12px;background:var(--gray-200);border-radius:4px;height:8px;overflow:hidden;">
+                    <div style="background:var(--primary);height:100%;width:55%;border-radius:4px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="aac-stat-card">
+            <div class="card-title">待审批</div>
+            <div style="text-align:center;padding:20px 0;">
+                <div style="font-size:36px;font-weight:700;color:var(--danger);">2</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">项待审批任务</div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../css/custom.css">
+</head>
+<body class="aac">
+<div class="aac-page">
+    <div class="aac-page-title">
+        <span class="title-bar"></span>
+        SOD评价标准
+    </div>
+
+    <div class="aac-card" style="background:var(--primary-light);border-color:var(--primary);margin-bottom:16px;padding:12px 20px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--primary-dark);">
+            <span>ℹ️</span>
+            <span>SOD评价标准支持<strong>公司级默认</strong>和<strong>BG级自定义</strong>两种范围。公司级默认规则不可修改，各BG可在默认规则基础上增改后保存为BG私有规则。</span>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <select style="width:180px;">
+            <option>公司级默认标准</option>
+            <option>CBG自定义标准</option>
+            <option>SBG自定义标准</option>
+            <option>EBG自定义标准</option>
+        </select>
+        <select style="width:180px;">
+            <option>模式1（适合解决方案/软件）</option>
+            <option>模式2（适合硬件/结构件）</option>
+        </select>
+    </div>
+
+    <div class="aac-card">
+        <div class="card-title">严重度（Severity）评价标准</div>
+        <table class="aac-sod-table">
+            <thead>
+                <tr><th>等级</th><th>评价标准描述</th></tr>
+            </thead>
+            <tbody id="severity-table"></tbody>
+        </table>
+    </div>
+
+    <div class="aac-card">
+        <div class="card-title">发生度（Occurrence）评价标准 — 模式1</div>
+        <table class="aac-sod-table">
+            <thead>
+                <tr><th>等级</th><th>评价标准描述</th></tr>
+            </thead>
+            <tbody id="occurrence-table"></tbody>
+        </table>
+    </div>
+
+    <div class="aac-card">
+        <div class="card-title">探测度（Detection）评价标准</div>
+        <table class="aac-sod-table">
+            <thead>
+                <tr><th>等级</th><th>评价标准描述</th></tr>
+            </thead>
+            <tbody id="detection-table"></tbody>
+        </table>
+    </div>
+
+    <div class="aac-card">
+        <div class="card-title">AP（Action Priority）参考表</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">AP参考表为固定标准（完整100行），暂不允许修改。根据SOD组合查AP参考表判定优先级为H/M/L。</div>
+        <div style="display:flex;gap:16px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span class="aac-risk aac-risk-H" style="font-size:11px;">H</span>
+                <span style="font-size:12px;">高优先级 — 必须采取措施</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span class="aac-risk aac-risk-M" style="font-size:11px;">M</span>
+                <span style="font-size:12px;">中优先级 — 建议采取措施</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span class="aac-risk aac-risk-L" style="font-size:11px;">L</span>
+                <span style="font-size:12px;">低优先级 — 可以不采取措施</span>
+            </div>
+        </div>
+        <div class="aac-placeholder" style="min-height:150px;">AP参考表（S×O×D组合 → AP等级映射，完整100行）</div>
+    </div>
+</div>
+
+<script src="../js/mock-data.js"></script>
+<script>
+(function () {
+    var sod = MockData.get('sodStandards');
+
+    function renderTable(containerId, data) {
+        var tbody = document.getElementById(containerId);
+        data.forEach(function (item) {
+            var cls = item.level >= 7 ? 'style="color:#ef4444;font-weight:700;"' : (item.level >= 4 ? 'style="color:#f59e0b;font-weight:600;"' : '');
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td ' + cls + '>' + item.level + '</td><td style="text-align:left;">' + item.desc + '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    renderTable('severity-table', sod.severity);
+    renderTable('occurrence-table', sod.occurrence_mode1);
+    renderTable('detection-table', sod.detection);
+})();
+</script>
+</body>
+</html>
