@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>协作表格编辑器 - FMEA多人协作原型</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.container {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  padding: 40px;
+  max-width: 800px;
+  width: 100%;
+}
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.header h1 {
+  font-size: 28px;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+.header p {
+  color: #6b7280;
+  font-size: 14px;
+}
+.tech-stack {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.tech-tag {
+  padding: 6px 14px;
+  background: #f3f4f6;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #4b5563;
+  font-weight: 500;
+}
+.tech-tag.primary {
+  background: #eef0fe;
+  color: #4f6ef7;
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.feature-card {
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+.feature-card:hover {
+  border-color: #4f6ef7;
+  box-shadow: 0 4px 12px rgba(79,110,247,0.15);
+  transform: translateY(-2px);
+}
+.feature-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.feature-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+.feature-desc {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+.demo-section {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.demo-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.demo-form {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.demo-form input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.demo-form input:focus {
+  border-color: #4f6ef7;
+  box-shadow: 0 0 0 3px rgba(79,110,247,0.1);
+}
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.btn-primary {
+  background: #4f6ef7;
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #3b56d9;
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: #fff;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+.btn-secondary:hover {
+  background: #f9fafb;
+}
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.doc-item {
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s;
+}
+.doc-item:hover {
+  border-color: #4f6ef7;
+}
+.doc-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.doc-icon {
+  width: 36px;
+  height: 36px;
+  background: #eef0fe;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.doc-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+}
+.doc-time {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+.footer {
+  text-align: center;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+  color: #9ca3af;
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .container { padding: 24px; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .demo-form { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📊 多人协作表格编辑器</h1>
+    <p>基于 TanStack Table 风格 + Yjs 实时协作 + AI 智能生成</p>
+    <div class="tech-stack">
+      <span class="tech-tag primary">Yjs</span>
+      <span class="tech-tag primary">WebSocket</span>
+      <span class="tech-tag">Node.js</span>
+      <span class="tech-tag">PostgreSQL</span>
+      <span class="tech-tag">AI 生成</span>
+    </div>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <div class="feature-title">实时多人协作</div>
+      <div class="feature-desc">基于 Yjs 的 CRDT 算法，支持多人同时编辑，数据实时同步，无冲突合并</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">AI 智能生成</div>
+      <div class="feature-desc">一键生成评估数据，智能分析失效模式，大幅提升评估效率</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <div class="feature-title">五维评估模型</div>
+      <div class="feature-desc">技术新颖性、影响范围、失效严重度、变更复杂度、历史问题，1-12分综合评分</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💾</div>
+      <div class="feature-title">数据持久化</div>
+      <div class="feature-desc">PostgreSQL 存储文档数据，支持版本回溯和历史记录</div>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <div class="demo-title">🚀 快速体验</div>
+    <div class="demo-form">
+      <input type="text" id="docName" placeholder="输入文档名称，如：系统级DRBFM评估表" value="系统级DRBFM评估表" />
+      <button class="btn btn-primary" onclick="openDoc()">
+        <span>打开文档</span>
+        <span>→</span>
+      </button>
+    </div>
+    
+    <div style="margin-top:16px;">
+      <div style="font-size:13px; color:#6b7280; margin-bottom:8px;">或者选择示例文档：</div>
+      <div class="doc-list">
+        <div class="doc-item">
+          <div class="doc-info">
+            <div class="doc-icon">📋</div>
+            <div>
+              <div class="doc-name">系统级DRBFM评估表</div>
+              <div class="doc-time">多人协作 · 实时同步</div>
+            </div>
+          </div>
+          <a class="btn btn-secondary" href="pages/collab-table.html?docId=sys-eval-001&docName=系统级DRBFM评估表">打开</a>
+        </div>
+        <div class="doc-item">
+          <div class="doc-info">
+            <div class="doc-icon">🔧</div>
+            <div>
+              <div class="doc-name">部件级风险评估表</div>
+              <div class="doc-time">AI生成 · 五维评分</div>
+            </div>
+          </div>
+          <a class="btn btn-secondary" href="pages/collab-table.html?docId=part-eval-001&docName=部件级风险评估表">打开</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    FMEA 2.0 协作表格原型 · TanStack Table 风格 + Yjs + Node.js + PostgreSQL
+  </div>
+</div>
+
+<script>
+function openDoc() {
+  const name = document.getElementById('docName').value || '未命名文档';
+  const docId = 'doc_' + Date.now();
+  window.location.href = 'pages/collab-table.html?docId=' + docId + '&docName=' + encodeURIComponent(name);
+}
+
+document.getElementById('docName').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    openDoc();
+  }
+});
+</script>
+</body>
+</html>

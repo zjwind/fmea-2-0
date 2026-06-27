@@ -11,7 +11,8 @@ var App = (function () {
         {
             id: 'evaluation', text: '评估任务', icon: '📋', children: [
                 { id: 'evaluation-system', text: '系统级', url: 'pages/evaluation-system.html' },
-                { id: 'evaluation-part', text: '部件级', url: 'pages/evaluation-part.html' }
+                { id: 'evaluation-part', text: '部件级', url: 'pages/evaluation-part.html' },
+                { id: 'collab-table', text: '协作表格(AI)', url: 'pages/collab-table.html' }
             ]
         },
         { id: 'analysis', text: 'DRBFM分析任务', icon: '🔬', url: 'pages/analysis-task-list.html' },

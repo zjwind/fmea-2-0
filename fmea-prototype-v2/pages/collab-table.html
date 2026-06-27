@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>协作表格编辑器 - FMEA评估</title>
+<link rel="stylesheet" href="../css/custom.css">
+<style>
+.collab-page {
+  padding: 16px;
+  background: var(--bg-app);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.collab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.collab-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.collab-title .doc-name {
+  color: var(--primary);
+}
+.collab-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.online-users {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+}
+.online-users .user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border: 2px solid #fff;
+  margin-left: -8px;
+}
+.online-users .user-avatar:first-child {
+  margin-left: 0;
+}
+.online-users .user-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #dcfce7;
+  color: #16a34a;
+}
+.connection-status .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse 2s infinite;
+}
+.connection-status.disconnected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.connection-status.disconnected .status-dot {
+  background: #ef4444;
+  animation: none;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.ai-panel {
+  background: linear-gradient(135deg, #f3e8ff 0%, #eef0fe 100%);
+  border: 1px solid #e9d5ff;
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.ai-panel .ai-icon {
+  font-size: 28px;
+}
+.ai-panel .ai-info {
+  flex: 1;
+}
+.ai-panel .ai-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5b21b6;
+  margin-bottom: 2px;
+}
+.ai-panel .ai-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.ai-panel .ai-actions {
+  display: flex;
+  gap: 8px;
+}
+.table-container {
+  flex: 1;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 10px;
+  flex-shrink: 0;
+}
+.table-toolbar .toolbar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin-right: auto;
+}
+.table-toolbar .toolbar-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.table-wrapper {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+.collab-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  width: max-content;
+  min-width: 100%;
+}
+.collab-table th,
+.collab-table td {
+  border-right: 1px solid var(--gray-200);
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0;
+  vertical-align: middle;
+  text-align: center;
+}
+.collab-table th {
+  background: var(--gray-50);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 8px 10px;
+  white-space: nowrap;
+  user-select: none;
+}
+.collab-table th:hover {
+  background: var(--gray-100);
+}
+.collab-table th .col-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.collab-table th .resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+}
+.collab-table th .resize-handle:hover {
+  background: var(--primary);
+}
+.collab-table td.cell-editable {
+  cursor: cell;
+  text-align: left;
+}
+.collab-table td.cell-editable:hover {
+  background: #f0f9ff;
+}
+.collab-table td.cell-editing {
+  background: #fff;
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.collab-table td .cell-content {
+  padding: 6px 10px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.collab-table td .cell-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  font-family: var(--font-family);
+  background: transparent;
+}
+.collab-table .sticky-col {
+  position: sticky;
+  z-index: 5;
+  background: var(--bg-surface);
+}
+.collab-table thead .sticky-col {
+  z-index: 15;
+}
+.collab-table .sticky-left-0 { left: 0; }
+.collab-table .sticky-left-1 { left: 60px; }
+.collab-table .sticky-left-2 { left: 260px; }
+.collab-table tr:hover td {
+  background: var(--gray-50);
+}
+.collab-table tr:hover td.sticky-col {
+  background: var(--gray-50);
+}
+.level-0 td { background: #fff; }
+.level-1 td { background: #f8f9fb; }
+.level-2 td { background: #f1f3f5; }
+.level-0 td.sticky-col { background: #fff; }
+.level-1 td.sticky-col { background: #f8f9fb; }
+.level-2 td.sticky-col { background: #f1f3f5; }
+tr.level-0:hover td { background: var(--gray-50); }
+tr.level-1:hover td { background: #eef1f4; }
+tr.level-2:hover td { background: #e9ecef; }
+.risk-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.risk-badge-H { background: #ef4444; color: #fff; }
+.risk-badge-M { background: #f59e0b; color: #333; }
+.risk-badge-L { background: #9ca3af; color: #fff; }
+.score-high { color: #dc2626; font-weight: 700; }
+.score-mid { color: #ef6c00; font-weight: 600; }
+.score-low { color: #16a34a; font-weight: 600; }
+.status-select {
+  width: 100%;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  font-family: var(--font-family);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.status-select:hover {
+  border-color: var(--gray-300);
+  background: var(--bg-surface);
+}
+.level-select {
+  width: 100%;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  font-family: var(--font-family);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  text-align-last: center;
+}
+.level-select:hover {
+  border-color: var(--gray-300);
+  background: var(--bg-surface);
+}
+.level-high { color: #dc2626; font-weight: 600; }
+.level-mid { color: #ef6c00; font-weight: 600; }
+.level-low { color: #16a34a; font-weight: 600; }
+.remote-cursor {
+  position: absolute;
+  width: 2px;
+  z-index: 100;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.remote-cursor-label {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #fff;
+  white-space: nowrap;
+  border-radius: 3px 3px 3px 0;
+  font-weight: 500;
+}
+.summary-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-color);
+  background: var(--gray-50);
+  gap: 24px;
+  flex-shrink: 0;
+}
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.summary-item .summary-value {
+  font-weight: 700;
+  color: var(--text-heading);
+}
+.summary-item.high .summary-value { color: var(--danger); }
+.summary-item.mid .summary-value { color: var(--warning); }
+.summary-item.low .summary-value { color: var(--success); }
+.dim-group-header {
+  background: #1e3a8a !important;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.dim-group-high {
+  background: #dc2626 !important;
+  color: #fff !important;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dim-group-mid {
+  background: #f59e0b !important;
+  color: #fff !important;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dim-group-low {
+  background: #6b7280 !important;
+  color: #fff !important;
+  font-size: 11px;
+  font-weight: 700;
+}
+.add-row-btn {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  background: var(--gray-50);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.2s;
+}
+.add-row-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.context-menu {
+  position: fixed;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 4px 0;
+  z-index: 10000;
+  min-width: 140px;
+}
+.context-menu-item {
+  padding: 8px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+.context-menu-item:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.context-menu-item.danger {
+  color: var(--danger);
+}
+.context-menu-item.danger:hover {
+  background: #fee2e2;
+}
+.context-menu-divider {
+  height: 1px;
+  background: var(--gray-200);
+  margin: 4px 0;
+}
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.user-setting-modal .user-color-options {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.user-setting-modal .color-option {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+.user-setting-modal .color-option:hover {
+  transform: scale(1.1);
+}
+.user-setting-modal .color-option.selected {
+  border-color: var(--text-heading);
+}
+@media (max-width: 768px) {
+  .ai-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ai-panel .ai-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .summary-bar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="collab-page">
+  <div class="collab-header">
+    <div class="collab-title">
+      <span>📊</span>
+      <span>协作表格编辑器</span>
+      <span class="doc-name" id="docName">加载中...</span>
+    </div>
+    <div class="collab-actions">
+      <div class="connection-status" id="connStatus">
+        <span class="status-dot"></span>
+        <span id="connStatusText">连接中...</span>
+      </div>
+      <div class="online-users" id="onlineUsers">
+        <div class="user-avatar" style="background:#4f6ef7">我</div>
+        <span class="user-count" id="userCount">1人在线</span>
+      </div>
+      <button class="aac-btn aac-btn-secondary aac-btn-sm" onclick="openUserSettings()">
+        ⚙️ 设置
+      </button>
+    </div>
+  </div>
+
+  <div class="ai-panel">
+    <div class="ai-icon">🤖</div>
+    <div class="ai-info">
+      <div class="ai-title">AI 智能辅助</div>
+      <div class="ai-desc">一键生成评估数据，智能分析失效模式，让评估工作更高效</div>
+    </div>
+    <div class="ai-actions">
+      <button class="aac-btn aac-btn-primary aac-btn-sm" onclick="generateAIData()">
+        ✨ AI生成评估表
+      </button>
+      <button class="aac-btn aac-btn-secondary aac-btn-sm" onclick="analyzeFailure()">
+        🔍 失效模式分析
+      </button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-toolbar">
+      <div class="toolbar-title" id="tableTitle">评估数据表</div>
+      <button class="aac-btn aac-btn-ghost aac-btn-sm toolbar-btn" onclick="addRow()">
+        ➕ 添加行
+      </button>
+      <button class="aac-btn aac-btn-ghost aac-btn-sm toolbar-btn" onclick="exportData()">
+        📤 导出
+      </button>
+      <button class="aac-btn aac-btn-ghost aac-btn-sm toolbar-btn" onclick="resetView()">
+        🔄 重置视图
+      </button>
+    </div>
+    <div class="table-wrapper" id="tableWrapper">
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="aac-spinner"></div>
+      </div>
+      <table class="collab-table" id="collabTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="summary-bar" id="summaryBar">
+      <div class="summary-item">
+        <span>总行数：</span>
+        <span class="summary-value" id="totalRows">0</span>
+      </div>
+      <div class="summary-item high">
+        <span>高风险：</span>
+        <span class="summary-value" id="highRisk">0</span>
+      </div>
+      <div class="summary-item mid">
+        <span>中风险：</span>
+        <span class="summary-value" id="midRisk">0</span>
+      </div>
+      <div class="summary-item low">
+        <span>低风险：</span>
+        <span class="summary-value" id="lowRisk">0</span>
+      </div>
+      <div class="summary-item">
+        <span>平均评分：</span>
+        <span class="summary-value" id="avgScore">-</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="contextMenu" class="context-menu" style="display:none;">
+  <div class="context-menu-item" onclick="insertRowAbove()">⬆️ 上方插入行</div>
+  <div class="context-menu-item" onclick="insertRowBelow()">⬇️ 下方插入行</div>
+  <div class="context-menu-divider"></div>
+  <div class="context-menu-item danger" onclick="deleteRow()">🗑️ 删除行</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/yjs@13.6.10/dist/yjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/y-websocket@1.5.4/dist/y-websocket.min.js"></script>
+<script>
+const CONFIG = {
+  WS_URL: 'ws://localhost:3001',
+  API_URL: 'http://localhost:3001',
+};
+
+let ydoc, provider, awareness;
+let yrows, ycolumns, ymeta;
+let columns = [];
+let rows = [];
+let isConnected = false;
+let currentUser = {
+  id: 'user_' + Math.random().toString(36).substr(2, 9),
+  name: '用户' + Math.floor(Math.random() * 1000),
+  color: '#4f6ef7',
+};
+let editingCell = null;
+let contextMenuRowIndex = -1;
+
+const colorOptions = [
+  '#4f6ef7', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
+];
+
+function getDocId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('docId') || 'demo-doc-001';
+}
+
+function getDocName() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('docName') || '系统级DRBFM评估表';
+}
+
+async function init() {
+  document.getElementById('docName').textContent = getDocName();
+  
+  const savedUser = localStorage.getItem('collabUser');
+  if (savedUser) {
+    currentUser = JSON.parse(savedUser);
+  }
+  
+  initYjs();
+  bindEvents();
+}
+
+function initYjs() {
+  const docId = getDocId();
+  ydoc = new Y.Doc();
+  
+  yrows = ydoc.getArray('rows');
+  ycolumns = ydoc.getArray('columns');
+  ymeta = ydoc.getMap('meta');
+  
+  yrows.observe(() => {
+    rows = yrows.toArray();
+    renderTableBody();
+    updateSummary();
+  });
+  
+  ycolumns.observe(() => {
+    columns = ycolumns.toArray();
+    renderTable();
+    updateSummary();
+  });
+  
+  const wsUrl = CONFIG.WS_URL + '?docId=' + docId + '&userId=' + currentUser.id + '&userName=' + encodeURIComponent(currentUser.name) + '&userColor=' + currentUser.color;
+  
+  let connectTimeout = setTimeout(() => {
+    fallbackToLocalMode();
+  }, 3000);
+  
+  try {
+    if (typeof YWebsocketProvider !== 'undefined') {
+      provider = new YWebsocketProvider(CONFIG.WS_URL, docId, ydoc, {
+        params: {
+          docId: docId,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userColor: currentUser.color,
+        }
+      });
+      awareness = provider.awareness;
+      
+      awareness.setLocalStateField('user', currentUser);
+      
+      provider.on('status', (event) => {
+        updateConnectionStatus(event.status);
+        if (event.status === 'connected') {
+          clearTimeout(connectTimeout);
+          isConnected = true;
+        }
+      });
+      
+      provider.on('sync', (isSync) => {
+        if (isSync) {
+          clearTimeout(connectTimeout);
+          isConnected = true;
+          document.getElementById('loadingOverlay').style.display = 'none';
+          columns = ycolumns.toArray();
+          rows = yrows.toArray();
+          renderTable();
+          updateSummary();
+          updateOnlineUsers();
+          
+          if (yrows.length === 0 && ycolumns.length === 0) {
+            initMockData();
+          }
+        }
+      });
+      
+      awareness.on('change', () => {
+        updateOnlineUsers();
+      });
+      
+      provider.on('connection-error', () => {
+        fallbackToLocalMode();
+      });
+    } else {
+      fallbackToLocalMode();
+    }
+  } catch (err) {
+    console.warn('Yjs connection failed, using local mode:', err);
+    fallbackToLocalMode();
+  }
+}
+
+function fallbackToLocalMode() {
+  if (isConnected) return;
+  
+  document.getElementById('loadingOverlay').style.display = 'none';
+  updateConnectionStatus('disconnected');
+  initMockData();
+  
+  showNotification('warning', '本地模式', '未连接到协作服务器，数据仅保存在本地');
+}
+
+function updateConnectionStatus(status) {
+  const statusEl = document.getElementById('connStatus');
+  const statusTextEl = document.getElementById('connStatusText');
+  
+  if (status === 'connected') {
+    statusEl.className = 'connection-status';
+    statusTextEl.textContent = '已连接';
+  } else {
+    statusEl.className = 'connection-status disconnected';
+    statusTextEl.textContent = '未连接';
+  }
+}
+
+function updateOnlineUsers() {
+  const states = awareness ? awareness.getStates() : new Map();
+  const users = [];
+  states.forEach((state, clientId) => {
+    if (state.user) {
+      users.push(state.user);
+    }
+  });
+  
+  if (users.length === 0) {
+    users.push(currentUser);
+  }
+  
+  const container = document.getElementById('onlineUsers');
+  container.innerHTML = '';
+  
+  users.slice(0, 5).forEach((user, i) => {
+    const avatar = document.createElement('div');
+    avatar.className = 'user-avatar';
+    avatar.style.background = user.color || '#4f6ef7';
+    avatar.style.marginLeft = i > 0 ? '-8px' : '0';
+    avatar.title = user.name;
+    avatar.textContent = user.name ? user.name.charAt(0) : '?';
+    container.appendChild(avatar);
+  });
+  
+  const count = document.createElement('span');
+  count.className = 'user-count';
+  count.textContent = users.length + '人在线';
+  container.appendChild(count);
+}
+
+function renderTable() {
+  columns = ycolumns ? ycolumns.toArray() : [];
+  rows = yrows ? yrows.toArray() : [];
+  
+  renderTableHead();
+  renderTableBody();
+}
+
+function renderTableHead() {
+  const thead = document.getElementById('tableHead');
+  thead.innerHTML = '';
+  
+  const dimGroups = getDimensionGroups();
+  
+  if (dimGroups.length > 0) {
+    const groupRow = document.createElement('tr');
+    
+    const fixedCols = columns.filter(c => c.pinned);
+    fixedCols.forEach(col => {
+      const th = document.createElement('th');
+      th.className = 'sticky-col sticky-left-' + fixedCols.indexOf(col);
+      th.rowSpan = 2;
+      th.style.minWidth = (col.width || 100) + 'px';
+      th.innerHTML = '<div class="col-header">' + col.name + '</div>';
+      groupRow.appendChild(th);
+    });
+    
+    const normalCols = columns.filter(c => !c.pinned);
+    let dimIndex = 0;
+    let colIndex = fixedCols.length;
+    
+    while (colIndex < columns.length) {
+      const col = columns[colIndex];
+      
+      if (col.dimension && dimIndex < dimGroups.length) {
+        const dim = dimGroups[dimIndex];
+        const dimCols = normalCols.filter(c => c.dimension === dim.id);
+        const nonDimColsBefore = [];
+        
+        while (colIndex < columns.length && !columns[colIndex].dimension) {
+          const th = document.createElement('th');
+          th.style.minWidth = (columns[colIndex].width || 100) + 'px';
+          th.rowSpan = 2;
+          th.innerHTML = '<div class="col-header">' + columns[colIndex].name + '</div>';
+          groupRow.appendChild(th);
+          colIndex++;
+        }
+        
+        if (colIndex < columns.length && columns[colIndex].dimension === dim.id) {
+          const th = document.createElement('th');
+          th.className = 'dim-group-header';
+          th.colSpan = dimCols.length;
+          th.textContent = dim.name + ' (' + (dim.weight * 100) + '%)';
+          groupRow.appendChild(th);
+          
+          dimIndex++;
+          colIndex += dimCols.length;
+        }
+      } else {
+        const th = document.createElement('th');
+        th.style.minWidth = (col.width || 100) + 'px';
+        th.rowSpan = 2;
+        th.innerHTML = '<div class="col-header">' + col.name + '</div>';
+        groupRow.appendChild(th);
+        colIndex++;
+      }
+    }
+    
+    thead.appendChild(groupRow);
+    
+    const subRow = document.createElement('tr');
+    columns.forEach(col => {
+      if (col.dimension) {
+        const th = document.createElement('th');
+        th.style.minWidth = (col.width || 80) + 'px';
+        th.innerHTML = '<div class="col-header">' + (col.type === 'level' ? '等级' : '得分') + '</div>';
+        subRow.appendChild(th);
+      }
+    });
+    thead.appendChild(subRow);
+  } else {
+    const row = document.createElement('tr');
+    columns.forEach((col, colIndex) => {
+      const th = document.createElement('th');
+      if (col.pinned) {
+        const pinnedIndex = columns.filter((c, i) => c.pinned && i < colIndex).length;
+        th.className = 'sticky-col sticky-left-' + pinnedIndex;
+      }
+      th.style.minWidth = (col.width || 100) + 'px';
+      th.innerHTML = '<div class="col-header">' + col.name + '</div>';
+      row.appendChild(th);
+    });
+    thead.appendChild(row);
+  }
+}
+
+function getDimensionGroups() {
+  const dims = ymeta ? ymeta.get('dimensions') : null;
+  return dims || [];
+}
+
+function renderTableBody() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  
+  rows.forEach((row, rowIndex) => {
+    const tr = document.createElement('tr');
+    tr.className = 'level-' + (row.level || 0);
+    tr.dataset.rowIndex = rowIndex;
+    
+    columns.forEach((col, colIndex) => {
+      const td = document.createElement('td');
+      td.dataset.rowIndex = rowIndex;
+      td.dataset.colId = col.id;
+      
+      if (col.pinned) {
+        const pinnedIndex = columns.filter((c, i) => c.pinned && i < colIndex).length;
+        td.className = 'sticky-col sticky-left-' + pinnedIndex;
+      }
+      
+      td.style.minWidth = (col.width || 100) + 'px';
+      
+      const value = getCellValue(row, col);
+      
+      if (col.editable !== false) {
+        td.className += ' cell-editable';
+        td.ondblclick = () => startEditing(rowIndex, col.id);
+      }
+      
+      const content = document.createElement('div');
+      content.className = 'cell-content';
+      content.innerHTML = formatCellValue(value, col, row);
+      td.appendChild(content);
+      
+      tr.appendChild(td);
+    });
+    
+    tr.oncontextmenu = (e) => showContextMenu(e, rowIndex);
+    
+    tbody.appendChild(tr);
+  });
+  
+  const addRow = document.createElement('tr');
+  const addCell = document.createElement('td');
+  addCell.colSpan = columns.length;
+  addCell.style.padding = '0';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-row-btn';
+  addBtn.textContent = '➕ 添加新行';
+  addBtn.onclick = () => addRow();
+  addCell.appendChild(addBtn);
+  addRow.appendChild(addCell);
+  tbody.appendChild(addRow);
+}
+
+function getCellValue(row, col) {
+  if (col.dimension && col.type === 'level') {
+    return row.dimensions?.[col.dimension]?.level || '';
+  }
+  if (col.dimension && col.type === 'score') {
+    return row.dimensions?.[col.dimension]?.score || 0;
+  }
+  return row[col.id] !== undefined ? row[col.id] : '';
+}
+
+function formatCellValue(value, col, row) {
+  if (col.type === 'risk') {
+    return '<span class="risk-badge risk-badge-' + value + '">' + value + '</span>';
+  }
+  if (col.type === 'score') {
+    let cls = 'score-low';
+    if (value >= 8) cls = 'score-high';
+    else if (value >= 5) cls = 'score-mid';
+    return '<span class="' + cls + '">' + value + '</span>';
+  }
+  if (col.type === 'level') {
+    const levelMap = { high: '高', mid: '中', low: '低' };
+    const clsMap = { high: 'level-high', mid: 'level-mid', low: 'level-low' };
+    return '<span class="' + (clsMap[value] || '') + '">' + (levelMap[value] || value || '-') + '</span>';
+  }
+  if (col.type === 'status') {
+    const statusMap = {
+      draft: '草稿',
+      'in-progress': '进行中',
+      submitted: '已提交',
+      approved: '已批准',
+      completed: '已完成',
+    };
+    return statusMap[value] || value || '-';
+  }
+  return value !== '' && value !== null && value !== undefined ? value : '-';
+}
+
+function startEditing(rowIndex, colId) {
+  if (editingCell) {
+    finishEditing();
+  }
+  
+  const col = columns.find(c => c.id === colId);
+  if (!col || col.editable === false) return;
+  
+  const row = rows[rowIndex];
+  if (!row) return;
+  
+  editingCell = { rowIndex, colId };
+  
+  const cell = document.querySelector(`td[data-row-index="${rowIndex}"][data-col-id="${colId}"]`);
+  if (!cell) return;
+  
+  cell.classList.add('cell-editing');
+  const content = cell.querySelector('.cell-content');
+  
+  if (col.type === 'level') {
+    const select = document.createElement('select');
+    select.className = 'level-select cell-input';
+    const options = [
+      { value: '', text: '-' },
+      { value: 'high', text: '高 (10分)' },
+      { value: 'mid', text: '中 (5分)' },
+      { value: 'low', text: '低 (1分)' },
+    ];
+    options.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.text;
+      if (getCellValue(row, col) === opt.value) option.selected = true;
+      if (opt.value === 'high') option.className = 'level-high';
+      if (opt.value === 'mid') option.className = 'level-mid';
+      if (opt.value === 'low') option.className = 'level-low';
+      select.appendChild(option);
+    });
+    select.onchange = () => {
+      updateCellValue(rowIndex, colId, select.value);
+      finishEditing();
+    };
+    select.onblur = () => finishEditing();
+    content.innerHTML = '';
+    content.appendChild(select);
+    select.focus();
+  } else if (col.type === 'status') {
+    const select = document.createElement('select');
+    select.className = 'status-select cell-input';
+    const options = [
+      { value: 'draft', text: '草稿' },
+      { value: 'in-progress', text: '进行中' },
+      { value: 'submitted', text: '已提交' },
+      { value: 'approved', text: '已批准' },
+      { value: 'completed', text: '已完成' },
+    ];
+    options.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.text;
+      if (getCellValue(row, col) === opt.value) option.selected = true;
+      select.appendChild(option);
+    });
+    select.onchange = () => {
+      updateCellValue(rowIndex, colId, select.value);
+      finishEditing();
+    };
+    select.onblur = () => finishEditing();
+    content.innerHTML = '';
+    content.appendChild(select);
+    select.focus();
+  } else {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'cell-input';
+    input.value = getCellValue(row, col);
+    input.onblur = () => {
+      updateCellValue(rowIndex, colId, input.value);
+      finishEditing();
+    };
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        input.blur();
+      } else if (e.key === 'Escape') {
+        finishEditing();
+      }
+    };
+    content.innerHTML = '';
+    content.appendChild(input);
+    input.focus();
+    input.select();
+  }
+}
+
+function finishEditing() {
+  if (!editingCell) return;
+  
+  const cell = document.querySelector(`td[data-row-index="${editingCell.rowIndex}"][data-col-id="${editingCell.colId}"]`);
+  if (cell) {
+    cell.classList.remove('cell-editing');
+  }
+  
+  editingCell = null;
+}
+
+function updateCellValue(rowIndex, colId, value) {
+  if (!yrows) return;
+  
+  const row = yrows.get(rowIndex);
+  if (!row) return;
+  
+  const col = columns.find(c => c.id === colId);
+  const newRow = { ...row };
+  
+  if (col.dimension && col.type === 'level') {
+    if (!newRow.dimensions) newRow.dimensions = {};
+    if (!newRow.dimensions[col.dimension]) newRow.dimensions[col.dimension] = {};
+    newRow.dimensions[col.dimension].level = value;
+    
+    const scoreMap = { high: 10, mid: 5, low: 1 };
+    newRow.dimensions[col.dimension].score = scoreMap[value] || 0;
+    
+    recalcRowScore(newRow);
+  } else {
+    newRow[colId] = value;
+  }
+  
+  yrows.delete(rowIndex, 1);
+  yrows.insert(rowIndex, [newRow]);
+}
+
+function recalcRowScore(row) {
+  const dimensions = getDimensionGroups();
+  if (!dimensions || dimensions.length === 0) return;
+  
+  let weightedScore = 0;
+  dimensions.forEach(dim => {
+    const score = row.dimensions?.[dim.id]?.score || 0;
+    weightedScore += score * dim.weight;
+  });
+  
+  const finalScore = Math.round((weightedScore / 10) * 11) + 1;
+  row.finalScore = finalScore;
+  
+  if (finalScore >= 8) row.riskLevel = 'H';
+  else if (finalScore >= 5) row.riskLevel = 'M';
+  else row.riskLevel = 'L';
+}
+
+function addRow() {
+  if (!yrows) return;
+  
+  const newRow = {
+    id: 'row_' + Date.now(),
+    index: rows.length + 1,
+    changeItem: '',
+    changeDesc: '',
+    partName: '',
+    level: 0,
+    dimensions: {},
+    finalScore: 1,
+    riskLevel: 'L',
+    conclusion: '',
+    assignee: '',
+    status: 'draft',
+    comments: '',
+  };
+  
+  const dimensions = getDimensionGroups();
+  dimensions.forEach(dim => {
+    newRow.dimensions[dim.id] = { level: 'low', score: 1 };
+  });
+  
+  yrows.push([newRow]);
+  
+  setTimeout(() => {
+    const wrapper = document.getElementById('tableWrapper');
+    wrapper.scrollTop = wrapper.scrollHeight;
+  }, 100);
+}
+
+function insertRowAbove() {
+  if (contextMenuRowIndex < 0) return;
+  hideContextMenu();
+  
+  if (!yrows) return;
+  
+  const newRow = {
+    id: 'row_' + Date.now(),
+    index: contextMenuRowIndex + 1,
+    changeItem: '',
+    changeDesc: '',
+    partName: '',
+    level: 0,
+    dimensions: {},
+    finalScore: 1,
+    riskLevel: 'L',
+    conclusion: '',
+    assignee: '',
+    status: 'draft',
+    comments: '',
+  };
+  
+  const dimensions = getDimensionGroups();
+  dimensions.forEach(dim => {
+    newRow.dimensions[dim.id] = { level: 'low', score: 1 };
+  });
+  
+  yrows.insert(contextMenuRowIndex, [newRow]);
+  updateRowIndices();
+}
+
+function insertRowBelow() {
+  if (contextMenuRowIndex < 0) return;
+  hideContextMenu();
+  
+  if (!yrows) return;
+  
+  const newRow = {
+    id: 'row_' + Date.now(),
+    index: contextMenuRowIndex + 2,
+    changeItem: '',
+    changeDesc: '',
+    partName: '',
+    level: 0,
+    dimensions: {},
+    finalScore: 1,
+    riskLevel: 'L',
+    conclusion: '',
+    assignee: '',
+    status: 'draft',
+    comments: '',
+  };
+  
+  const dimensions = getDimensionGroups();
+  dimensions.forEach(dim => {
+    newRow.dimensions[dim.id] = { level: 'low', score: 1 };
+  });
+  
+  yrows.insert(contextMenuRowIndex + 1, [newRow]);
+  updateRowIndices();
+}
+
+function deleteRow() {
+  if (contextMenuRowIndex < 0) return;
+  hideContextMenu();
+  
+  if (!yrows || yrows.length <= 1) return;
+  
+  if (!confirm('确定要删除这一行吗？')) return;
+  
+  yrows.delete(contextMenuRowIndex, 1);
+  updateRowIndices();
+}
+
+function updateRowIndices() {
+  if (!yrows) return;
+  
+  const currentRows = yrows.toArray();
+  currentRows.forEach((row, i) => {
+    row.index = i + 1;
+  });
+  
+  yrows.delete(0, yrows.length);
+  yrows.push(currentRows);
+}
+
+function showContextMenu(e, rowIndex) {
+  e.preventDefault();
+  contextMenuRowIndex = rowIndex;
+  
+  const menu = document.getElementById('contextMenu');
+  menu.style.display = 'block';
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+}
+
+function hideContextMenu() {
+  const menu = document.getElementById('contextMenu');
+  menu.style.display = 'none';
+  contextMenuRowIndex = -1;
+}
+
+function updateSummary() {
+  const total = rows.length;
+  let high = 0, mid = 0, low = 0, totalScore = 0;
+  
+  rows.forEach(row => {
+    if (row.riskLevel === 'H') high++;
+    else if (row.riskLevel === 'M') mid++;
+    else if (row.riskLevel === 'L') low++;
+    totalScore += row.finalScore || 0;
+  });
+  
+  document.getElementById('totalRows').textContent = total;
+  document.getElementById('highRisk').textContent = high;
+  document.getElementById('midRisk').textContent = mid;
+  document.getElementById('lowRisk').textContent = low;
+  document.getElementById('avgScore').textContent = total > 0 ? (totalScore / total).toFixed(1) : '-';
+}
+
+async function generateAIData() {
+  if (!confirm('AI生成会覆盖当前表格数据，确定继续吗？')) return;
+  
+  const docId = getDocId();
+  
+  try {
+    const res = await fetch(CONFIG.API_URL + '/api/ai/generate-evaluation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        docId: docId,
+        changeCount: 10,
+        createdBy: currentUser.name,
+      }),
+    });
+    
+    if (!res.ok) throw new Error('AI generation failed');
+    
+    showNotification('success', 'AI生成成功', '评估数据已生成并同步到表格');
+  } catch (err) {
+    console.error('AI generation error:', err);
+    generateMockAIData();
+    showNotification('warning', '本地模拟模式', '后端服务未连接，使用本地模拟数据');
+  }
+}
+
+function generateMockAIData() {
+  const dimensions = [
+    { id: 'novelty', name: '技术新颖性', weight: 0.15 },
+    { id: 'impact', name: '影响范围', weight: 0.30 },
+    { id: 'severity', name: '失效严重度', weight: 0.30 },
+    { id: 'complexity', name: '变更复杂度', weight: 0.20 },
+    { id: 'history', name: '历史问题', weight: 0.05 },
+  ];
+  
+  const changeItems = [
+    { name: '主控芯片型号变更', description: '由A型号更换为B型号，性能提升30%', partName: '主控板', level: 0 },
+    { name: '电源管理模块优化', description: '优化电源转换效率，降低功耗', partName: '电源板', level: 0 },
+    { name: 'DDR内存容量扩展', description: '从8GB扩展到16GB', partName: '主控板', level: 1 },
+    { name: '散热结构重新设计', description: '因功耗增加，需重新设计散热方案', partName: '结构件', level: 0 },
+    { name: '以太网接口升级', description: '从千兆升级到万兆', partName: '接口板', level: 1 },
+    { name: 'USB接口数量增加', description: '增加2个USB 3.0接口', partName: '接口板', level: 1 },
+    { name: '固件存储扩容', description: 'Flash从128MB扩容到256MB', partName: '主控板', level: 2 },
+    { name: '时钟电路优化', description: '更换更稳定的晶振', partName: '主控板', level: 2 },
+    { name: 'PCB布局调整', description: '因芯片变更导致PCB重新布局', partName: 'PCB', level: 1 },
+    { name: 'EMC防护增强', description: '增加EMC防护器件', partName: 'PCB', level: 2 },
+  ];
+  
+  const newRows = changeItems.map((item, index) => {
+    const scores = {};
+    dimensions.forEach(dim => {
+      const rand = Math.random();
+      let level, score;
+      if (rand < 0.2) { level = 'high'; score = 10; }
+      else if (rand < 0.6) { level = 'mid'; score = 5; }
+      else { level = 'low'; score = 1; }
+      scores[dim.id] = { level, score };
+    });
+    
+    const weightedScore = dimensions.reduce((sum, dim) => sum + scores[dim.id].score * dim.weight, 0);
+    const finalScore = Math.round((weightedScore / 10) * 11) + 1;
+    const riskLevel = finalScore >= 8 ? 'H' : finalScore >= 5 ? 'M' : 'L';
+    
+    const conclusions = {
+      H: `高风险：${item.name}变更影响重大，需立即制定详细应对措施`,
+      M: `中风险：${item.name}需要关注，建议定期跟踪`,
+      L: `低风险：${item.name}风险可控，按常规流程处理`,
+    };
+    
+    return {
+      id: 'row_' + index + '_' + Date.now(),
+      index: index + 1,
+      changeItem: item.name,
+      changeDesc: item.description,
+      partName: item.partName,
+      level: item.level,
+      dimensions: scores,
+      finalScore,
+      riskLevel,
+      conclusion: conclusions[riskLevel],
+      assignee: '',
+      status: 'draft',
+      comments: '',
+    };
+  });
+  
+  const newColumns = [
+    { id: 'index', name: '序号', width: 60, editable: false, pinned: true },
+    { id: 'changeItem', name: '变更项', width: 200, editable: true, pinned: true },
+    { id: 'changeDesc', name: '变更描述', width: 250, editable: true },
+    { id: 'partName', name: '部件名称', width: 150, editable: true },
+    ...dimensions.flatMap(dim => [
+      { id: `${dim.id}_level`, name: `${dim.name}-等级`, width: 100, editable: true, dimension: dim.id, type: 'level' },
+      { id: `${dim.id}_score`, name: `${dim.name}-得分`, width: 80, editable: false, dimension: dim.id, type: 'score' },
+    ]),
+    { id: 'finalScore', name: '综合评分(1-12)', width: 120, editable: false, type: 'score' },
+    { id: 'riskLevel', name: '风险等级', width: 100, editable: false, type: 'risk' },
+    { id: 'conclusion', name: '评估结论', width: 200, editable: true },
+    { id: 'assignee', name: '负责人', width: 120, editable: true },
+    { id: 'status', name: '状态', width: 100, editable: true, type: 'status' },
+    { id: 'comments', name: '备注', width: 200, editable: true },
+  ];
+  
+  if (yrows && ycolumns && ymeta) {
+    yrows.delete(0, yrows.length);
+    ycolumns.delete(0, ycolumns.length);
+    newRows.forEach(row => yrows.push([row]));
+    newColumns.forEach(col => ycolumns.push([col]));
+    ymeta.set('dimensions', dimensions);
+  } else {
+    rows = newRows;
+    columns = newColumns;
+    renderTable();
+    updateSummary();
+  }
+}
+
+function analyzeFailure() {
+  showNotification('info', '失效模式分析', '功能开发中，敬请期待...');
+}
+
+function exportData() {
+  const data = {
+    columns,
+    rows,
+    exportedAt: new Date().toISOString(),
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'evaluation-table-' + Date.now() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  showNotification('success', '导出成功', '表格数据已导出为JSON文件');
+}
+
+function resetView() {
+  const wrapper = document.getElementById('tableWrapper');
+  wrapper.scrollTop = 0;
+  wrapper.scrollLeft = 0;
+  showNotification('success', '视图已重置', '');
+}
+
+function openUserSettings() {
+  const modal = document.createElement('div');
+  modal.className = 'aac-modal-overlay';
+  modal.innerHTML = `
+    <div class="aac-modal user-setting-modal">
+      <div class="aac-modal-header">
+        <div class="modal-title">用户设置</div>
+        <button class="modal-close" onclick="this.closest('.aac-modal-overlay').remove()">✕</button>
+      </div>
+      <div class="aac-modal-body">
+        <div class="aac-form-group">
+          <label>用户名</label>
+          <input type="text" id="userNameInput" value="${currentUser.name}" />
+        </div>
+        <div class="aac-form-group" style="margin-top:12px;">
+          <label>用户颜色</label>
+          <div class="user-color-options">
+            ${colorOptions.map(c => `
+              <div class="color-option ${c === currentUser.color ? 'selected' : ''}" 
+                   style="background:${c}" 
+                   onclick="selectUserColor('${c}', this)"></div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="aac-modal-footer">
+        <button class="aac-btn aac-btn-secondary" onclick="this.closest('.aac-modal-overlay').remove()">取消</button>
+        <button class="aac-btn aac-btn-primary" onclick="saveUserSettings(this)">保存</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function selectUserColor(color, el) {
+  document.querySelectorAll('.user-setting-modal .color-option').forEach(opt => {
+    opt.classList.remove('selected');
+  });
+  el.classList.add('selected');
+  currentUser.color = color;
+}
+
+function saveUserSettings(btn) {
+  const nameInput = document.getElementById('userNameInput');
+  currentUser.name = nameInput.value || '匿名用户';
+  
+  localStorage.setItem('collabUser', JSON.stringify(currentUser));
+  
+  if (awareness) {
+    awareness.setLocalStateField('user', currentUser);
+  }
+  
+  updateOnlineUsers();
+  btn.closest('.aac-modal-overlay').remove();
+  showNotification('success', '设置已保存', '');
+}
+
+function showNotification(type, title, msg) {
+  const notif = document.createElement('div');
+  notif.className = 'aac-notification ' + type;
+  notif.innerHTML = `
+    <div class="notif-title">${title}</div>
+    ${msg ? `<div class="notif-msg">${msg}</div>` : ''}
+  `;
+  document.body.appendChild(notif);
+  
+  setTimeout(() => {
+    notif.style.opacity = '0';
+    notif.style.transform = 'translateX(40px)';
+    setTimeout(() => notif.remove(), 300);
+  }, 3000);
+}
+
+function bindEvents() {
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.context-menu')) {
+      hideContextMenu();
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      finishEditing();
+      hideContextMenu();
+    }
+  });
+  
+  document.getElementById('tableWrapper').addEventListener('scroll', () => {
+    finishEditing();
+  });
+}
+
+function initMockData() {
+  const dimensions = [
+    { id: 'novelty', name: '技术新颖性', weight: 0.15 },
+    { id: 'impact', name: '影响范围', weight: 0.30 },
+    { id: 'severity', name: '失效严重度', weight: 0.30 },
+    { id: 'complexity', name: '变更复杂度', weight: 0.20 },
+    { id: 'history', name: '历史问题', weight: 0.05 },
+  ];
+  
+  columns = [
+    { id: 'index', name: '序号', width: 60, editable: false, pinned: true },
+    { id: 'changeItem', name: '变更项', width: 200, editable: true, pinned: true },
+    { id: 'changeDesc', name: '变更描述', width: 250, editable: true },
+    { id: 'partName', name: '部件名称', width: 150, editable: true },
+    ...dimensions.flatMap(dim => [
+      { id: `${dim.id}_level`, name: `${dim.name}-等级`, width: 100, editable: true, dimension: dim.id, type: 'level' },
+      { id: `${dim.id}_score`, name: `${dim.name}-得分`, width: 80, editable: false, dimension: dim.id, type: 'score' },
+    ]),
+    { id: 'finalScore', name: '综合评分(1-12)', width: 120, editable: false, type: 'score' },
+    { id: 'riskLevel', name: '风险等级', width: 100, editable: false, type: 'risk' },
+    { id: 'conclusion', name: '评估结论', width: 200, editable: true },
+    { id: 'assignee', name: '负责人', width: 120, editable: true },
+    { id: 'status', name: '状态', width: 100, editable: true, type: 'status' },
+    { id: 'comments', name: '备注', width: 200, editable: true },
+  ];
+  
+  rows = [];
+  
+  if (ymeta) {
+    ymeta.set('dimensions', dimensions);
+  }
+  
+  renderTable();
+  updateSummary();
+}
+
+window.fallbackYProvider = null;
+
+init();
+</script>
+</body>
+</html>
