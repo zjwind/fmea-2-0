@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>协作表格 - 简化测试版</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.container {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  padding: 40px;
+  max-width: 1200px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+}
+h1 {
+  font-size: 24px;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.status.connected {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.status.disconnected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ai-panel {
+  background: linear-gradient(135deg, #f3e8ff 0%, #eef0fe 100%);
+  border: 1px solid #e9d5ff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.ai-icon { font-size: 32px; }
+.ai-info { flex: 1; }
+.ai-title { font-size: 15px; font-weight: 600; color: #5b21b6; margin-bottom: 4px; }
+.ai-desc { font-size: 12px; color: #6b7280; }
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.btn-primary { background: #4f6ef7; color: #fff; }
+.btn-primary:hover { background: #3b56d9; }
+.btn-secondary { background: #fff; color: #4b5563; border: 1px solid #d1d5db; }
+.btn-secondary:hover { background: #f9fafb; }
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+.table-container {
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  max-height: calc(90vh - 280px);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  text-align: center;
+}
+th {
+  background: #f9fafb;
+  color: #374151;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+td.editable { cursor: cell; }
+td.editable:hover { background: #f0f9ff; }
+td.editing { background: #fff; box-shadow: inset 0 0 0 2px #4f6ef7; }
+td input {
+  width: 100%;
+  padding: 6px;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  font-family: inherit;
+}
+td select {
+  width: 100%;
+  padding: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+td select:hover { border-color: #d1d5db; background: #fff; }
+.sticky-left { position: sticky; left: 0; z-index: 5; background: #fff; }
+tr:hover td { background: #f9fafb; }
+tr:hover td.sticky-left { background: #f9fafb; }
+.risk-H { background: #ef4444; color: #fff; padding: 2px 12px; border-radius: 4px; font-weight: 700; }
+.risk-M { background: #f59e0b; color: #333; padding: 2px 12px; border-radius: 4px; font-weight: 700; }
+.risk-L { background: #9ca3af; color: #fff; padding: 2px 12px; border-radius: 4px; font-weight: 700; }
+.score-high { color: #dc2626; font-weight: 700; }
+.score-mid { color: #f59e0b; font-weight: 600; }
+.score-low { color: #16a34a; font-weight: 600; }
+.level-high { color: #dc2626; font-weight: 600; }
+.level-mid { color: #f59e0b; font-weight: 600; }
+.level-low { color: #16a34a; font-weight: 600; }
+.summary {
+  display: flex;
+  gap: 24px;
+  margin-top: 15px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.summary-item { display: flex; align-items: center; gap: 6px; }
+.summary-value { font-weight: 700; color: #1f2937; }
+.loading {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #4f6ef7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #fff;
+  padding: 14px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border-left: 4px solid #4f6ef7;
+  animation: slideIn 0.3s ease;
+}
+.notification.warning { border-left-color: #f59e0b; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+</style>
+</head>
+<body>
+<div id="loading" class="loading">
+  <div class="spinner"></div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>📊 协作表格编辑器</h1>
+    <div id="status" class="status disconnected">
+      <span class="status-dot"></span>
+      <span>未连接</span>
+    </div>
+  </div>
+
+  <div class="ai-panel">
+    <div class="ai-icon">🤖</div>
+    <div class="ai-info">
+      <div class="ai-title">AI 智能辅助</div>
+      <div class="ai-desc">一键生成评估数据，智能分析失效模式</div>
+    </div>
+    <button class="btn btn-primary" onclick="generateData()">✨ AI生成评估表</button>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-secondary" onclick="addRow()">➕ 添加行</button>
+    <button class="btn btn-secondary" onclick="exportData()">📤 导出JSON</button>
+    <button class="btn btn-secondary" onclick="resetView()">🔄 重置视图</button>
+  </div>
+
+  <div class="table-container">
+    <table id="table">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="summary" id="summary">
+    <div class="summary-item">总行数: <span class="summary-value" id="totalRows">0</span></div>
+    <div class="summary-item">高风险: <span class="summary-value" id="highRisk">0</span></div>
+    <div class="summary-item">中风险: <span class="summary-value" id="midRisk">0</span></div>
+    <div class="summary-item">低风险: <span class="summary-value" id="lowRisk">0</span></div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'http://localhost:3001';
+
+let columns = [];
+let rows = [];
+let editingCell = null;
+
+const dimensions = [
+  { id: 'novelty', name: '技术新颖性', weight: 0.15 },
+  { id: 'impact', name: '影响范围', weight: 0.30 },
+  { id: 'severity', name: '失效严重度', weight: 0.30 },
+  { id: 'complexity', name: '变更复杂度', weight: 0.20 },
+  { id: 'history', name: '历史问题', weight: 0.05 },
+];
+
+function init() {
+  initTable();
+  loadData();
+  document.getElementById('loading').style.display = 'none';
+}
+
+function initTable() {
+  columns = [
+    { id: 'index', name: '序号', pinned: true },
+    { id: 'changeItem', name: '变更项', editable: true, pinned: true },
+    { id: 'changeDesc', name: '变更描述', editable: true },
+    { id: 'partName', name: '部件名称', editable: true },
+    ...dimensions.flatMap(dim => [
+      { id: `${dim.id}_level`, name: `${dim.name}-等级`, editable: true, dimension: dim.id, type: 'level' },
+      { id: `${dim.id}_score`, name: `${dim.name}-得分`, dimension: dim.id, type: 'score' },
+    ]),
+    { id: 'finalScore', name: '综合评分', type: 'score' },
+    { id: 'riskLevel', name: '风险等级', type: 'risk' },
+    { id: 'conclusion', name: '评估结论', editable: true },
+    { id: 'status', name: '状态', editable: true, type: 'status' },
+  ];
+  
+  renderTable();
+}
+
+async function loadData() {
+  try {
+    const res = await fetch(API_URL + '/api/ai/generate-evaluation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ docId: 'test-' + Date.now(), changeCount: 8 })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      rows = data.rows;
+      updateConnectionStatus(true);
+      showNotification('success', '已连接到服务器');
+    } else {
+      throw new Error('API返回错误');
+    }
+  } catch (err) {
+    console.warn('使用本地数据:', err);
+    generateLocalData();
+    updateConnectionStatus(false);
+    showNotification('warning', '本地模式', '未连接到服务器，使用本地数据');
+  }
+  
+  renderTable();
+  updateSummary();
+}
+
+function generateLocalData() {
+  const changeItems = [
+    { name: '主控芯片型号变更', desc: '由A型号更换为B型号，性能提升30%', part: '主控板' },
+    { name: '电源管理模块优化', desc: '优化电源转换效率，降低功耗', part: '电源板' },
+    { name: 'DDR内存容量扩展', desc: '从8GB扩展到16GB', part: '主控板' },
+    { name: '散热结构重新设计', desc: '因功耗增加，需重新设计散热方案', part: '结构件' },
+    { name: '以太网接口升级', desc: '从千兆升级到万兆', part: '接口板' },
+    { name: 'USB接口数量增加', desc: '增加2个USB 3.0接口', part: '接口板' },
+    { name: '固件存储扩容', desc: 'Flash从128MB扩容到256MB', part: '主控板' },
+    { name: '时钟电路优化', desc: '更换更稳定的晶振', part: '主控板' },
+  ];
+  
+  rows = changeItems.map((item, index) => {
+    const scores = {};
+    dimensions.forEach(dim => {
+      const rand = Math.random();
+      let level, score;
+      if (rand < 0.2) { level = 'high'; score = 10; }
+      else if (rand < 0.6) { level = 'mid'; score = 5; }
+      else { level = 'low'; score = 1; }
+      scores[dim.id] = { level, score };
+    });
+    
+    const weightedScore = dimensions.reduce((sum, dim) => sum + scores[dim.id].score * dim.weight, 0);
+    const finalScore = Math.round((weightedScore / 10) * 11) + 1;
+    const riskLevel = finalScore >= 8 ? 'H' : finalScore >= 5 ? 'M' : 'L';
+    
+    return {
+      id: 'row_' + index,
+      index: index + 1,
+      changeItem: item.name,
+      changeDesc: item.desc,
+      partName: item.part,
+      dimensions: scores,
+      finalScore,
+      riskLevel,
+      conclusion: getConclusion(riskLevel, item.name),
+      status: 'draft',
+    };
+  });
+}
+
+function getConclusion(level, name) {
+  const conclusions = {
+    H: `高风险：${name}变更影响重大，需立即制定详细应对措施`,
+    M: `中风险：${name}需要关注，建议定期跟踪`,
+    L: `低风险：${name}风险可控，按常规流程处理`,
+  };
+  return conclusions[level];
+}
+
+function renderTable() {
+  const thead = document.getElementById('tableHead');
+  const tbody = document.getElementById('tableBody');
+  
+  thead.innerHTML = '<tr>' + columns.map((col, i) => {
+    let cls = '';
+    if (col.pinned && i < 3) cls = 'sticky-left';
+    return `<th class="${cls}">${col.name}</th>`;
+  }).join('') + '</tr>';
+  
+  tbody.innerHTML = rows.map((row, ri) => {
+    return '<tr>' + columns.map((col, ci) => {
+      let cls = '';
+      if (col.pinned && ci < 3) cls = 'sticky-left';
+      if (col.editable) cls += ' editable';
+      
+      const value = getCellValue(row, col);
+      const content = formatValue(value, col, row);
+      
+      return `<td class="${cls}" data-row="${ri}" data-col="${col.id}" ondblclick="startEdit(this)">${content}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+}
+
+function getCellValue(row, col) {
+  if (col.dimension && col.type === 'level') {
+    return row.dimensions?.[col.dimension]?.level || '';
+  }
+  if (col.dimension && col.type === 'score') {
+    return row.dimensions?.[col.dimension]?.score || 0;
+  }
+  return row[col.id] !== undefined ? row[col.id] : '';
+}
+
+function formatValue(value, col, row) {
+  if (col.type === 'risk') {
+    return `<span class="risk-${value}">${value}</span>`;
+  }
+  if (col.type === 'score') {
+    let cls = 'score-low';
+    if (value >= 8) cls = 'score-high';
+    else if (value >= 5) cls = 'score-mid';
+    return `<span class="${cls}">${value}</span>`;
+  }
+  if (col.type === 'level') {
+    const map = { high: '高', mid: '中', low: '低' };
+    const cls = 'level-' + value;
+    return `<span class="${cls}">${map[value] || '-'}</span>`;
+  }
+  if (col.type === 'status') {
+    const map = { draft: '草稿', 'in-progress': '进行中', submitted: '已提交', approved: '已批准', completed: '已完成' };
+    return map[value] || value || '-';
+  }
+  return value !== '' ? value : '-';
+}
+
+function startEdit(td) {
+  if (!td.classList.contains('editable')) return;
+  if (editingCell) finishEdit();
+  
+  editingCell = td;
+  td.classList.add('editing');
+  
+  const col = columns[Array.from(td.parentNode.children).indexOf(td)];
+  const rowIndex = parseInt(td.dataset.row);
+  const row = rows[rowIndex];
+  const value = getCellValue(row, col);
+  
+  if (col.type === 'level') {
+    const select = document.createElement('select');
+    ['high', 'mid', 'low'].forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt;
+      o.text = { high: '高', mid: '中', low: '低' }[opt];
+      if (opt === value) o.selected = true;
+      select.appendChild(o);
+    });
+    select.onchange = () => updateLevel(rowIndex, col.id, select.value);
+    select.onblur = finishEdit;
+    td.innerHTML = '';
+    td.appendChild(select);
+    select.focus();
+  } else {
+    const input = document.createElement('input');
+    input.value = value || '';
+    input.onblur = () => updateValue(rowIndex, col.id, input.value);
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') input.blur();
+      if (e.key === 'Escape') cancelEdit();
+    };
+    td.innerHTML = '';
+    td.appendChild(input);
+    input.focus();
+    input.select();
+  }
+}
+
+function updateLevel(rowIndex, colId, level) {
+  const col = columns.find(c => c.id === colId);
+  const dimId = col.dimension;
+  const scoreMap = { high: 10, mid: 5, low: 1 };
+  
+  rows[rowIndex].dimensions[dimId].level = level;
+  rows[rowIndex].dimensions[dimId].score = scoreMap[level];
+  
+  recalcScore(rowIndex);
+  renderTable();
+  updateSummary();
+}
+
+function updateValue(rowIndex, colId, value) {
+  rows[rowIndex][colId] = value;
+  renderTable();
+}
+
+function cancelEdit() {
+  if (!editingCell) return;
+  editingCell.classList.remove('editing');
+  editingCell = null;
+  renderTable();
+}
+
+function finishEdit() {
+  if (!editingCell) return;
+  editingCell.classList.remove('editing');
+  editingCell = null;
+}
+
+function recalcScore(rowIndex) {
+  const row = rows[rowIndex];
+  let weighted = 0;
+  dimensions.forEach(dim => {
+    weighted += (row.dimensions[dim.id]?.score || 0) * dim.weight;
+  });
+  row.finalScore = Math.round((weighted / 10) * 11) + 1;
+  row.riskLevel = row.finalScore >= 8 ? 'H' : row.finalScore >= 5 ? 'M' : 'L';
+}
+
+function addRow() {
+  const newRow = {
+    id: 'row_' + Date.now(),
+    index: rows.length + 1,
+    changeItem: '',
+    changeDesc: '',
+    partName: '',
+    dimensions: {},
+    finalScore: 1,
+    riskLevel: 'L',
+    conclusion: '',
+    status: 'draft',
+  };
+  dimensions.forEach(dim => {
+    newRow.dimensions[dim.id] = { level: 'low', score: 1 };
+  });
+  rows.push(newRow);
+  renderTable();
+  updateSummary();
+}
+
+function updateSummary() {
+  let high = 0, mid = 0, low = 0;
+  rows.forEach(row => {
+    if (row.riskLevel === 'H') high++;
+    else if (row.riskLevel === 'M') mid++;
+    else low++;
+  });
+  document.getElementById('totalRows').textContent = rows.length;
+  document.getElementById('highRisk').textContent = high;
+  document.getElementById('midRisk').textContent = mid;
+  document.getElementById('lowRisk').textContent = low;
+}
+
+function updateConnectionStatus(connected) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + (connected ? 'connected' : 'disconnected');
+  el.querySelector('span:last-child').textContent = connected ? '已连接' : '未连接';
+}
+
+function resetView() {
+  document.querySelector('.table-container').scrollTop = 0;
+  document.querySelector('.table-container').scrollLeft = 0;
+}
+
+function exportData() {
+  const data = { columns, rows, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'evaluation-table-' + Date.now() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotification('success', '导出成功');
+}
+
+async function generateData() {
+  await loadData();
+}
+
+function showNotification(type, title, msg) {
+  const notif = document.createElement('div');
+  notif.className = 'notification ' + type;
+  notif.innerHTML = `<strong>${title}</strong>${msg ? '<br>' + msg : ''}`;
+  document.body.appendChild(notif);
+  setTimeout(() => {
+    notif.style.opacity = '0';
+    notif.style.transform = 'translateX(40px)';
+    setTimeout(() => notif.remove(), 300);
+  }, 3000);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cancelEdit();
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('td.editing')) finishEdit();
+});
+
+init();
+</script>
+</body>
+</html>

@@ -147,19 +147,27 @@ app.post('/api/ai/generate-evaluation', async (req, res) => {
     const evaluationData = generateEvaluationTable(changeItems);
     
     if (docId) {
-      await saveAIGeneration(docId, `生成${changeCount}条评估项`, evaluationData, createdBy || '');
+      try {
+        await saveAIGeneration(docId, `生成${changeCount}条评估项`, evaluationData, createdBy || '');
+      } catch (dbErr) {
+        console.warn('Database save skipped:', dbErr.message);
+      }
       
-      const ydoc = getYDoc(docId, true);
-      const yrows = ydoc.getArray('rows');
-      const ycolumns = ydoc.getArray('columns');
-      const ymeta = ydoc.getMap('meta');
-      
-      yrows.delete(0, yrows.length);
-      ycolumns.delete(0, ycolumns.length);
-      
-      evaluationData.rows.forEach(row => yrows.push([row]));
-      evaluationData.columns.forEach(col => ycolumns.push([col]));
-      ymeta.set('dimensions', evaluationData.dimensions || []);
+      try {
+        const ydoc = getYDoc(docId, true);
+        const yrows = ydoc.getArray('rows');
+        const ycolumns = ydoc.getArray('columns');
+        const ymeta = ydoc.getMap('meta');
+        
+        yrows.delete(0, yrows.length);
+        ycolumns.delete(0, ycolumns.length);
+        
+        evaluationData.rows.forEach(row => yrows.push([row]));
+        evaluationData.columns.forEach(col => ycolumns.push([col]));
+        ymeta.set('dimensions', evaluationData.dimensions || []);
+      } catch (ydocErr) {
+        console.warn('Yjs save skipped:', ydocErr.message);
+      }
     }
     
     res.json(evaluationData);

@@ -10,6 +10,13 @@ const pool = new Pool({
 
 async function initDB() {
   try {
+    await pool.query('SELECT 1');
+  } catch (err) {
+    console.warn('Database not available:', err.message);
+    throw err;
+  }
+  
+  try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS documents (
         id VARCHAR(255) PRIMARY KEY,
@@ -42,9 +49,10 @@ async function initDB() {
       );
     `);
     
-    console.log('Database initialized successfully');
+    console.log('Database tables created/verified');
   } catch (err) {
-    console.error('Database initialization error:', err);
+    console.error('Database setup error:', err.message);
+    throw err;
   }
 }
 

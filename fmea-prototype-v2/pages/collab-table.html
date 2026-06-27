@@ -635,22 +635,13 @@ function initYjs() {
     updateSummary();
   });
   
-  const wsUrl = CONFIG.WS_URL + '?docId=' + docId + '&userId=' + currentUser.id + '&userName=' + encodeURIComponent(currentUser.name) + '&userColor=' + currentUser.color;
-  
   let connectTimeout = setTimeout(() => {
     fallbackToLocalMode();
-  }, 3000);
+  }, 2000);
   
   try {
     if (typeof YWebsocketProvider !== 'undefined') {
-      provider = new YWebsocketProvider(CONFIG.WS_URL, docId, ydoc, {
-        params: {
-          docId: docId,
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userColor: currentUser.color,
-        }
-      });
+      provider = new YWebsocketProvider(CONFIG.WS_URL, docId, ydoc, {});
       awareness = provider.awareness;
       
       awareness.setLocalStateField('user', currentUser);
@@ -685,13 +676,21 @@ function initYjs() {
       });
       
       provider.on('connection-error', () => {
+        clearTimeout(connectTimeout);
+        fallbackToLocalMode();
+      });
+      
+      provider.on('connection-close', () => {
+        clearTimeout(connectTimeout);
         fallbackToLocalMode();
       });
     } else {
+      clearTimeout(connectTimeout);
       fallbackToLocalMode();
     }
   } catch (err) {
     console.warn('Yjs connection failed, using local mode:', err);
+    clearTimeout(connectTimeout);
     fallbackToLocalMode();
   }
 }
